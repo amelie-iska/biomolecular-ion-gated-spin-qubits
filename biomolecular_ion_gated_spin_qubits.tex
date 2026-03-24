@@ -1,0 +1,2106 @@
+\documentclass[11pt]{report}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{fontspec}
+% \setmainfont{TeX Gyre Pagella}
+\usepackage{setspace}
+\setstretch{1.12}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{array,booktabs,longtable,tabularx,multirow}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric,backgrounds,matrix,decorations.pathreplacing}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{listings}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!60!black
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{26pt}
+\fancyhead[L]{Hierarchical Biomolecular Quantum Architectures: Protein-Ion Qudits and Electrochemical Control}
+\fancyfoot[C]{\thepage}
+
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\Large}
+  {\chaptertitlename\ \thechapter}{0.5em}{}
+
+\newcommand{\sourcepaper}{Rosaleny et al., \emph{Peptides as versatile scaffolds for quantum computing}, 2017}
+\newcommand{\lbt}{Lanthanide Binding Tag}
+\newcommand{\lbtc}{LBTC}
+\newcommand{\dalbt}{daLBT}
+\newcommand{\au}{Au(111)}
+\newcommand{\ham}{Hamiltonian}
+\newcommand{\eg}{e.g.}
+\newcommand{\ie}{i.e.}
+\newcommand{\etal}{et al.}
+\newcommand{\Tr}{\mathrm{Tr}}
+\newcommand{\id}{\mathbb{I}}
+\newcommand{\genusop}{\mathrm{genus}}
+\newcommand{\Xd}{X_d}
+\newcommand{\Zd}{Z_d}
+\newcommand{\Fock}{\mathcal{F}}
+\newcommand{\Code}{\mathcal{C}}
+\newcommand{\Graph}{\mathcal{G}}
+\newcommand{\Surface}{\Sigma}
+
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+
+\lstdefinestyle{cirqstyle}{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue!60!black},
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{red!50!black},
+  showstringspaces=false,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible
+}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+{\huge\bfseries Ion-Gated Biomolecular Quantum Architectures\par}
+\vspace{0.5cm}
+{\Large Protein-Ion Qudits, De Novo Scaffolds, Thermostability Optimization, and Hierarchical Control\par}
+\vspace{1.2cm}
+{\large Anonymous authors\par}
+\vfill
+{\large March 2026\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+Protein-based quantum hardware remains compelling because protein sequence controls geometry, modularity, and genetic encodability, but the original lanthanide-binding peptide platform leaves three coupled engineering problems unresolved: how to scaffold protein-ion complexes into locally robust registers, how to redesign them for stronger ligand compatibility and higher thermostability, and how to organize their connectivity into a topology that supports locality-preserving error correction. This manuscript addresses those problems by integrating the experimentally grounded peptide-lanthanide qubit literature with a corrected five-stage design stack: RFdiffusion3 for all-atom motif scaffolding, ThermoGFN-IF for sequence-level inverse-folding redesign, RosettaFold3 for structure validation, UMA for atomistic trajectory validation, and InfGCN for framewise electron-density validation over those trajectories. The resulting architecture treats a single protein-ion complex as a qudit, uses RFdiffusion3 to scaffold multi-complex subnetworks that implement local logical qubits with reduced reliance on long-range ion transport, uses ThermoGFN-IF to redesign those scaffolds for stiffer second shells and stronger bound-state integrity, and then subjects shortlisted candidates to a layered validation stack before experimental promotion.
+
+Three levels of the proposal are developed in detail. At the molecular level, the paper shows how metal-binding motifs, actuator motifs, and membrane- or pore-adjacent control motifs can be jointly scaffolded while preserving the active coordination geometry. At the control and compilation level, it formulates generalized shift and clock operators, effective qudit Hamiltonians, ion- and gap-junction-mediated coupling models, and high-level Cirq sketches for local entangling primitives. At the architectural level, it defines a hierarchy from single protein-ion complexes to scaffolded intracellular logical modules to intercellular connectivity graphs, links that hierarchy to minimal-genus surface embeddings and surface-code-like or hyperbolic topological error-correction constructions, and gives explicit order-of-magnitude abundance, edge-count, and throughput estimates for the resulting resource stack. Throughout, the paper distinguishes established experimental facts from forward-looking design hypotheses. It does not claim that fault-tolerant quantum computation in living human cells has been demonstrated; instead, it presents a rigorous roadmap for how de novo scaffold generation, thermostability optimization, electrochemical control, topology-aware compilation, and quantitative scaling analysis could make that long-horizon objective scientifically sharper and technologically more credible.
+
+\chapter*{Contributions}
+\addcontentsline{toc}{chapter}{Contributions}
+The main contributions are as follows.
+
+\begin{enumerate}[leftmargin=2em]
+\item It consolidates the experimentally relevant ingredients of peptide lanthanide qubits: coherent GdLBT and NdLBT control, asymmetric multi-site constructs, recombinant extensibility, and gold-supported monolayers.
+\item It integrates RFdiffusion3 into the platform as an all-atom motif-scaffolding engine for building local protein-ion subnetworks, actuator-bearing supports, and pore- or gap-junction-adjacent anchoring structures around fixed metal-binding geometries.
+\item It integrates ThermoGFN-IF as the sequence-redesign stage after RFdiffusion3 scaffolding, and it makes explicit that RosettaFold3, UMA, and InfGCN enter as downstream validation layers rather than additional generators.
+\item It generalizes the theory stack from qubits to protein-ion qudits, introduces shift and clock operators for local control and entanglement synthesis, and gives a high-level Cirq compilation sketch for frame-based control.
+\item It formalizes a hierarchy from single complexes to scaffolded logical modules to intercellular graphs, then links the resulting connectivity graph to minimal-genus embeddings and surface-code-like or hyperbolic topological protection.
+\item It adds a quantitative hierarchy model that converts concentrations, active fractions, scaffold sizes, and graph degrees into per-cell abundance bounds, edge budgets, calibration burdens, and encoded-capacity estimates.
+\item It translates the full architecture into a practical implementation program spanning chemistry, spectroscopy, de novo protein design, microfabrication, gap-junction-aware control, and staged ex vivo to cell-compatible validation.
+\end{enumerate}
+
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Introduction}
+
+\section{Motivation}
+Lanthanide-binding peptides occupy a distinctive niche in quantum materials research. They are short enough to be chemically synthesized, modular enough to be genetically encoded, and structurally organized enough to function as repeatable coordination motifs. The 2017 study of Rosaleny \etal{} demonstrated that these peptides are not merely luminescent tags or structural probes: they can host coherent spin dynamics, support multiple Rabi oscillations, be concatenated into asymmetric multi-site architectures, and be interfaced with metallic surfaces in a device-relevant geometry. Those ingredients make peptide-based spin systems an attractive foundation for a broader class of biomolecular quantum devices.
+
+At the same time, scalability in molecular spin systems remains constrained by a familiar bottleneck: couplings are often fixed by synthesis. That observation motivates the central question addressed here: can electrochemical state variables be used to tune interactions between biomolecular spin centers without sacrificing the structural precision that makes the platform useful in the first place? The architecture developed in this paper answers that question in the affirmative, but only after imposing a strict design rule: the control layer should act on secondary mechanical or electrostatic degrees of freedom, not directly on the first coordination sphere.
+
+\section{Scope}
+The paper has three complementary aims. The first is to distill the experimentally grounded lessons of peptide lanthanide spin qubits, with emphasis on coherence, structural modularity, biosynthetic extensibility, and surface integration. The second is to show how RFdiffusion3 and ThermoGFN-IF-style workflows can be used together to convert those motifs into de novo scaffolded, ligand-aware, and more thermostable local modules. The third is to formulate a hierarchical control architecture in which ionic gradients, membrane-like junctions, and intercellular conduits modulate couplings between those modules while a topology-aware compiler maps the resulting connectivity graph to a surface-code-like error-correction layer.
+
+The paper is intentionally implementation oriented. It does not present the full architecture as an accomplished experimental system, and it especially does not claim that quantum computation in living human cells has already been demonstrated. Instead, it identifies which parts are already supported by experiment, which parts follow by physically conservative inference, and which parts remain high-risk engineering objectives.
+
+\section{Central thesis}
+The central thesis is simple:
+\begin{quote}
+Peptide- and protein-bound ion complexes are plausible chemically programmable quantum hardware elements, and their progression from isolated molecular qubits to hierarchical, locally encoded, eventually cell-compatible quantum modules becomes substantially more credible when all-atom motif scaffolding and ligand-aware thermostability optimization are inserted between the coordination chemistry and the electrochemical control layer.
+\end{quote}
+
+This thesis already implies two design rules. First, directly exposing the active metal-binding pocket to strong, uncontrolled ionic competition is bad design. Using ionic gradients to drive membrane potential, charged linker motion, hydrogen-bond rearrangement, hydration changes, or electrostatic boundary conditions is far more plausible. Second, long-range ion transport should not carry the whole burden of logic formation. The more entangling structure that can be hard-wired locally into RFdiffusion3-scaffolded subnetworks and then rigidified through ThermoGFN-IF-style optimization, the less the architecture depends on fragile long-range transport and the more naturally it supports logical encoding.
+
+\section{Hierarchical Architecture at a Glance}
+Figure~\ref{fig:hierarchical-fullpage} provides an early visual summary of the architecture. Each cell contains multiple dense local qudit modules near the membrane, those modules are only sparsely linked within a cell, and cell-to-cell couplings are routed through explicit membrane interfaces such as gap junctions and ion channels. The rest of the manuscript progressively formalizes this picture, but the hierarchy is already visible in one page: dense local structure, sparse mesoscopic routing, and membrane-mediated intercellular control.
+
+\begin{figure}[p]
+\centering
+\vspace*{-0.90cm}
+\makebox[\textwidth][c]{%
+\resizebox{0.90\paperwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm,>=Latex,font=\small]
+  \tikzset{
+    cell/.style={draw=red!70!black, fill=red!4, rounded corners=20pt, line width=1.3pt},
+    membrane/.style={draw=red!45!black, rounded corners=18pt, line width=0.6pt},
+    modulebox/.style={draw=blue!70!black, fill=blue!10, rounded corners=10pt, line width=0.95pt},
+    qudit/.style={circle, draw=green!55!black, fill=green!28, minimum size=3.8mm, inner sep=0pt},
+    dense/.style={draw=orange!85!black, line width=0.9pt},
+    mesolink/.style={draw=blue!80!black, dash pattern=on 3pt off 2pt, line width=1.0pt},
+    sparseinter/.style={draw=purple!75!black, dashed, line width=1.0pt},
+    ionchan/.style={draw=yellow!50!black, fill=yellow!30, rounded corners=1pt, line width=0.8pt},
+    gjblock/.style={draw=purple!70!black, fill=purple!22, rounded corners=1pt, line width=0.8pt}
+  }
+
+  \node[font=\Large\bfseries, align=center, text width=13.4cm] at (7.9,19.45)
+    {Hierarchical Cell-to-Cell Qudit Architecture};
+  \node[font=\scriptsize, align=center, text width=13.6cm] at (7.9,18.74)
+    {Dense local clusters, less-dense intra-cell wiring, and sparse membrane-mediated intercellular routing.};
+
+  % Cell boundaries
+  \draw[cell] (0.4,10.8) rectangle (7.4,18.6);
+  \draw[membrane] (0.58,10.98) rectangle (7.22,18.42);
+  \draw[cell] (8.4,10.8) rectangle (15.4,18.6);
+  \draw[membrane] (8.58,10.98) rectangle (15.22,18.42);
+  \draw[cell] (0.4,1.6) rectangle (7.4,9.4);
+  \draw[membrane] (0.58,1.78) rectangle (7.22,9.22);
+  \draw[cell] (8.4,1.6) rectangle (15.4,9.4);
+  \draw[membrane] (8.58,1.78) rectangle (15.22,9.22);
+
+  \node[anchor=north west, font=\bfseries] at (0.78,18.30) {Cell A};
+  \node[anchor=north west, font=\bfseries] at (8.78,18.30) {Cell B};
+  \node[anchor=north west, font=\bfseries] at (0.78,9.10) {Cell C};
+  \node[anchor=north west, font=\bfseries] at (8.78,9.10) {Cell D};
+
+  % Module boxes
+  \node[modulebox, minimum width=2.75cm, minimum height=2.10cm, anchor=south west] (Amod1) at (0.95,15.35) {};
+  \node[modulebox, minimum width=2.55cm, minimum height=2.00cm, anchor=south west] (Amod2) at (4.15,13.65) {};
+  \node[modulebox, minimum width=2.55cm, minimum height=2.00cm, anchor=south west] (Bmod1) at (8.85,13.95) {};
+  \node[modulebox, minimum width=2.75cm, minimum height=2.10cm, anchor=south west] (Bmod2) at (12.00,15.25) {};
+  \node[modulebox, minimum width=2.75cm, minimum height=2.10cm, anchor=south west] (Cmod1) at (0.95,5.55) {};
+  \node[modulebox, minimum width=2.55cm, minimum height=2.00cm, anchor=south west] (Cmod2) at (4.15,3.85) {};
+  \node[modulebox, minimum width=2.55cm, minimum height=2.00cm, anchor=south west] (Dmod1) at (8.85,4.35) {};
+  \node[modulebox, minimum width=2.75cm, minimum height=2.10cm, anchor=south west] (Dmod2) at (12.00,5.60) {};
+
+  % Cell A local cluster nodes
+  \path ($(Amod1.south west)+(0.42,0.42)$) node[qudit] (A11) {};
+  \path ($(Amod1.south west)+(0.62,1.46)$) node[qudit] (A12) {};
+  \path ($(Amod1.south west)+(1.56,0.72)$) node[qudit] (A13) {};
+  \path ($(Amod1.south west)+(2.03,1.38)$) node[qudit] (A14) {};
+  \draw[dense] (A11) -- (A12) -- (A13) -- (A11);
+  \draw[dense] (A12) -- (A14) -- (A13);
+
+  \path ($(Amod2.south west)+(0.38,0.40)$) node[qudit] (A21) {};
+  \path ($(Amod2.south west)+(0.62,1.34)$) node[qudit] (A22) {};
+  \path ($(Amod2.south west)+(1.42,0.62)$) node[qudit] (A23) {};
+  \path ($(Amod2.south west)+(1.92,1.34)$) node[qudit] (A24) {};
+  \draw[dense] (A21) -- (A22) -- (A23) -- (A21);
+  \draw[dense] (A22) -- (A24) -- (A23);
+
+  % Cell B local cluster nodes
+  \path ($(Bmod1.south west)+(0.38,0.42)$) node[qudit] (B11) {};
+  \path ($(Bmod1.south west)+(0.60,1.36)$) node[qudit] (B12) {};
+  \path ($(Bmod1.south west)+(1.42,0.64)$) node[qudit] (B13) {};
+  \path ($(Bmod1.south west)+(1.92,1.34)$) node[qudit] (B14) {};
+  \draw[dense] (B11) -- (B12) -- (B13) -- (B11);
+  \draw[dense] (B12) -- (B14) -- (B13);
+
+  \path ($(Bmod2.south west)+(0.42,0.42)$) node[qudit] (B21) {};
+  \path ($(Bmod2.south west)+(0.62,1.46)$) node[qudit] (B22) {};
+  \path ($(Bmod2.south west)+(1.56,0.72)$) node[qudit] (B23) {};
+  \path ($(Bmod2.south west)+(2.03,1.38)$) node[qudit] (B24) {};
+  \draw[dense] (B21) -- (B22) -- (B23) -- (B21);
+  \draw[dense] (B22) -- (B24) -- (B23);
+
+  % Cell C local cluster nodes
+  \path ($(Cmod1.south west)+(0.42,0.42)$) node[qudit] (C11) {};
+  \path ($(Cmod1.south west)+(0.62,1.46)$) node[qudit] (C12) {};
+  \path ($(Cmod1.south west)+(1.56,0.72)$) node[qudit] (C13) {};
+  \path ($(Cmod1.south west)+(2.03,1.38)$) node[qudit] (C14) {};
+  \draw[dense] (C11) -- (C12) -- (C13) -- (C11);
+  \draw[dense] (C12) -- (C14) -- (C13);
+
+  \path ($(Cmod2.south west)+(0.38,0.40)$) node[qudit] (C21) {};
+  \path ($(Cmod2.south west)+(0.62,1.34)$) node[qudit] (C22) {};
+  \path ($(Cmod2.south west)+(1.42,0.62)$) node[qudit] (C23) {};
+  \path ($(Cmod2.south west)+(1.92,1.34)$) node[qudit] (C24) {};
+  \draw[dense] (C21) -- (C22) -- (C23) -- (C21);
+  \draw[dense] (C22) -- (C24) -- (C23);
+
+  % Cell D local cluster nodes
+  \path ($(Dmod1.south west)+(0.38,0.42)$) node[qudit] (D11) {};
+  \path ($(Dmod1.south west)+(0.60,1.36)$) node[qudit] (D12) {};
+  \path ($(Dmod1.south west)+(1.42,0.64)$) node[qudit] (D13) {};
+  \path ($(Dmod1.south west)+(1.92,1.34)$) node[qudit] (D14) {};
+  \draw[dense] (D11) -- (D12) -- (D13) -- (D11);
+  \draw[dense] (D12) -- (D14) -- (D13);
+
+  \path ($(Dmod2.south west)+(0.42,0.42)$) node[qudit] (D21) {};
+  \path ($(Dmod2.south west)+(0.62,1.46)$) node[qudit] (D22) {};
+  \path ($(Dmod2.south west)+(1.56,0.72)$) node[qudit] (D23) {};
+  \path ($(Dmod2.south west)+(2.03,1.38)$) node[qudit] (D24) {};
+  \draw[dense] (D21) -- (D22) -- (D23) -- (D21);
+  \draw[dense] (D22) -- (D24) -- (D23);
+
+  % Denser intra-cell module-to-module links
+  \draw[mesolink] (A13) -- (A21);
+  \draw[mesolink] (A14) -- (A22);
+  \draw[mesolink] (A12) -- (A24);
+  \draw[mesolink] (B13) -- (B21);
+  \draw[mesolink] (B14) -- (B22);
+  \draw[mesolink] (B12) -- (B24);
+  \draw[mesolink] (C13) -- (C21);
+  \draw[mesolink] (C14) -- (C22);
+  \draw[mesolink] (C12) -- (C24);
+  \draw[mesolink] (D13) -- (D21);
+  \draw[mesolink] (D14) -- (D22);
+  \draw[mesolink] (D12) -- (D24);
+
+  % Ion channels on membranes
+  \draw[ionchan] (1.0,18.2) rectangle (1.3,18.75);
+  \draw[->, thick, yellow!60!black] (1.15,18.82) -- (1.15,18.05);
+  \draw[ionchan] (11.3,18.2) rectangle (11.6,18.75);
+  \draw[->, thick, yellow!60!black] (11.45,18.82) -- (11.45,18.05);
+  \draw[ionchan] (5.9,10.55) rectangle (6.2,11.1);
+  \draw[->, thick, yellow!60!black] (6.05,10.4) -- (6.05,11.2);
+  \draw[ionchan] (0.45,4.2) rectangle (0.75,4.75);
+  \draw[->, thick, yellow!60!black] (0.25,4.48) -- (0.82,4.48);
+  \draw[ionchan] (15.05,4.9) rectangle (15.35,5.45);
+  \draw[->, thick, yellow!60!black] (14.88,5.18) -- (15.42,5.18);
+
+  % Horizontal gap junctions
+  \draw[gjblock] (7.28,15.2) rectangle (7.52,15.95);
+  \draw[gjblock] (8.28,15.2) rectangle (8.52,15.95);
+  \draw[purple!80!black, line width=1.4pt] (7.52,15.575) -- (8.28,15.575);
+
+  \draw[gjblock] (7.28,5.8) rectangle (7.52,6.55);
+  \draw[gjblock] (8.28,5.8) rectangle (8.52,6.55);
+  \draw[purple!80!black, line width=1.4pt] (7.52,6.175) -- (8.28,6.175);
+
+  % Vertical gap junctions
+  \draw[gjblock] (3.45,9.28) rectangle (4.2,9.52);
+  \draw[gjblock] (3.45,10.28) rectangle (4.2,10.52);
+  \draw[purple!80!black, line width=1.4pt] (3.825,9.52) -- (3.825,10.28);
+
+  \draw[gjblock] (11.55,9.28) rectangle (12.3,9.52);
+  \draw[gjblock] (11.55,10.28) rectangle (12.3,10.52);
+  \draw[purple!80!black, line width=1.4pt] (11.925,9.52) -- (11.925,10.28);
+
+  % Sparse intercellular couplings
+  \draw[sparseinter] (A24) -- (7.4,15.575) -- (8.4,15.575) -- (B11);
+  \draw[sparseinter] (C24) -- (7.4,6.175) -- (8.4,6.175) -- (D11);
+  \draw[sparseinter] (A14) -- (3.825,10.52) -- (3.825,9.28) -- (C13);
+  \draw[sparseinter] (B24) -- (11.925,10.52) -- (11.925,9.28) -- (D23);
+  \node[font=\footnotesize, align=center, fill=white, inner sep=1pt] at (7.9,10.55)
+    {sparse intercellular routing\\through membrane interfaces};
+
+  % Legend
+  \node[qudit] at (1.05,0.82) {};
+  \node[anchor=west, font=\footnotesize] at (1.33,0.82) {protein-ion qudit};
+  \draw[modulebox] (4.55,0.54) rectangle (5.25,1.10);
+  \node[anchor=west, font=\footnotesize] at (5.48,0.82) {scaffolded cluster};
+  \draw[dense] (8.95,0.82) -- (9.65,0.82);
+  \node[anchor=west, font=\footnotesize] at (9.88,0.82) {dense local coupling};
+  \draw[mesolink] (12.55,0.82) -- (13.30,0.82);
+  \node[anchor=west, font=\footnotesize] at (13.52,0.82) {intra-cell link};
+
+  \draw[sparseinter] (1.00,0.18) -- (1.75,0.18);
+  \node[anchor=west, font=\footnotesize] at (1.98,0.18) {intercellular edge};
+  \draw[ionchan] (5.35,-0.04) rectangle (5.65,0.34);
+  \node[anchor=west, font=\footnotesize] at (5.90,0.15) {ion channel};
+  \draw[gjblock] (8.30,-0.04) rectangle (8.52,0.34);
+  \draw[gjblock] (8.86,-0.04) rectangle (9.08,0.34);
+  \draw[purple!80!black, line width=1.2pt] (8.52,0.15) -- (8.86,0.15);
+  \node[anchor=west, font=\footnotesize] at (9.30,0.15) {gap junction};
+  \draw[cell] (12.10,-0.07) rectangle (12.95,0.40);
+  \node[anchor=west, font=\footnotesize] at (13.18,0.15) {membrane boundary};
+\end{tikzpicture}
+}
+}
+\vspace{-0.5cm}
+\caption{Full-page conceptual diagram of the hierarchical architecture. Small, membrane-proximal local qudit modules are densely connected inside each cell, sparse intra-cell links stitch those modules into larger local cell clusters, and even sparser cell-to-cell couplings are routed through explicit membrane interfaces such as gap junctions and ion channels. The picture emphasizes the intended hierarchy: dense local logical structure first, sparse membrane-mediated routing second.}
+\label{fig:hierarchical-fullpage}
+\end{figure}
+
+\clearpage
+
+\section{The 2026 context}
+The foundational peptide-spin study dates from 2017. Since then, the molecular quantum information community has advanced in at least four directions relevant here.
+
+\begin{enumerate}[leftmargin=2em]
+\item Molecular spins have matured as quantum sensors in hybrid microwave environments.
+\item Surface-based coherent control of atomic and molecular spins has progressed, especially in scanning-tunneling and on-surface settings.
+\item Biologically derived qubit candidates have broadened beyond metal-tagged peptides, as shown by 2025 work on fluorescent-protein spin qubits.
+\item Multi-spin molecular architectures are increasingly being treated as genuine control problems rather than mere synthesis challenges.
+\item All-atom de novo biomolecular design has progressed to RFdiffusion3, which can scaffold functional motifs in the presence of non-protein atoms and thereby gives this platform a practical route from isolated motifs to larger, geometry-controlled local subnetworks.
+\item Multi-oracle protein optimization methods such as the ThermoGFN-IF design stack have made thermostability, ligand awareness, and dynamics-aware sequence refinement more systematic, which is exactly the combination needed if one hopes to push biomolecular quantum hardware toward less fragile operating paradigms and settings.
+\end{enumerate}
+
+Those developments do not obsolete the 2017 peptide work. They make it more interesting, because they provide neighboring technologies that can handle sensing, on-surface control, or optical interfacing while peptide chemistry provides modular scaffold engineering.
+
+\chapter{Foundational Results from Peptide Lanthanide Spin Qubits}
+
+\section{The canonical \lbt{} motif as a quantum-engineering scaffold}
+The 2017 study centers on short peptide sequences known as \lbt s. The canonical sequence is
+\begin{center}
+\texttt{YIDTNNDGWYEGDELLA}.
+\end{center}
+These tags were originally developed in biochemistry for lanthanide coordination and structural studies. The key conceptual move of Rosaleny \etal{} was to reframe them as quantum and spintronic building blocks. This matters because the tags are short enough to be chemically synthesized, genetically encoded, inserted into proteins, duplicated, or arranged into more elaborate biomolecular constructs.
+
+The study emphasizes that the \lbt{} motif behaves as an autonomously folding region. That claim matters for quantum hardware. If the motif folded unpredictably in each new protein environment, then distance, orientation, anisotropy axis, and transport pathway would become uncontrollable. Structural comparisons and SHAPE analysis instead indicate that the first fifteen residues preserve a robust local fold across distinct protein contexts. For quantum hardware, this means that the motif is not merely a chelator; it is a reusable spatial module.
+
+\section{The measured coherence of GdLBT and NdLBT}
+The most important experimentally grounded result is the demonstration of coherent spin manipulation in two peptide-bound lanthanide systems. Only GdLBT and NdLBT yielded usable EPR signals in the reported pulsed measurements, but that already established the headline result: peptide-bound lanthanide complexes can support measurable coherent oscillations.
+
+The paper reports, at cryogenic temperature and in frozen solution, approximate relaxation values
+\[
+T_1 \approx 10~\mu\text{s}, \qquad T_2 \approx 2~\mu\text{s}
+\]
+for GdLBT, and
+\[
+T_1 \approx 3~\mu\text{s}, \qquad T_2 \approx 1~\mu\text{s}
+\]
+for NdLBT. These values are not yet competitive with the best molecular or solid-state qubits, but that is not the relevant comparison. The important point is feasibility in a chemically soft scaffold rich in vibrational and nuclear-spin degrees of freedom. The 2017 study also reports roughly twenty coherent Rabi oscillations for both systems under Hartmann-Hahn conditions. In practical quantum-engineering terms, the platform is therefore not confined to static spectroscopy; it crosses into the domain of active coherent control.
+
+This result is easy to underestimate. A peptide environment is crowded with protons, internal modes, solvent interactions, and conformational flexibility. A naive expectation would be catastrophic decoherence. The accompanying calculations show that the proton bath imposes an upper coherence ceiling but is not the dominant bottleneck in the measured setting. That observation opens the door to chemical optimization rather than abandonment.
+
+\begin{table}[ht]
+\centering
+\caption{Representative qubit metrics reported for peptide-bound lanthanide systems in Rosaleny \etal{}. Values are approximate because the source text reports them in rounded form.}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{5.2cm}}
+\toprule
+System & $T_1$ & $T_2$ & Interpretation \\
+\midrule
+GdLBT & $\sim 10~\mu$s & $\sim 2~\mu$s & First proof that a peptide-hosted lanthanide qubit can support coherent microwave control and multiple Rabi cycles. \\
+NdLBT & $\sim 3~\mu$s & $\sim 1~\mu$s & Particularly notable because Nd-based molecular qubits were rare; establishes peptide compatibility with a different lanthanide manifold. \\
+Proton-bath estimate & ceiling near $< 200~\mu$s & not directly measured & Suggests room remains for chemical optimization before the nuclear spin bath becomes the hard limit. \\
+Rabi cycles & about 20 & not a relaxation time & Enough to treat the platform as controllable hardware rather than a purely spectroscopic curiosity. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Why multiple coordination environments matter}
+The 2017 paper does not stop at single spin qubits. It argues that useful quantum logic requires multiple spin centers with deliberately non-equivalent local environments. Chemically, this means one should not merely place two identical ions somewhere in a long peptide and hope for the best. One should build distinguishable sites whose anisotropy, transition frequencies, or effective spin \ham{}s differ in a controlled way.
+
+The paper therefore proposes the asymmetric double-\lbt{} construct
+\begin{center}
+\texttt{YIDTDNDGWYEGDELYIDTNNDGWYEGDELLA},
+\end{center}
+named \dalbt{}. One of the subunits includes a carboxamide-to-carboxylate modification relative to the other. The crucial point is that the motif's fold remains robust while the electrostatic distribution and coordination environment change. That is exactly the kind of move a quantum engineer wants: perturb the spin physics without destroying the scaffold.
+
+Using structural precedents, the 2017 study estimates a lanthanide-lanthanide separation of approximately $20 \pm 1$~\AA{} for such a non-spaced double tag. That scale matters because dipolar interactions fall as $r^{-3}$. A twofold distance error is a roughly eightfold coupling error. Structural reproducibility is therefore not a luxury; it is the difference between a designed two-qubit interaction and an uncontrolled ensemble.
+
+\section{Bacterial expression as a scaling mechanism}
+One of the most practical contributions of the 2017 paper is methodological rather than purely spectroscopic. The authors use bacterial biosynthesis to produce longer peptide constructs that would be awkward or expensive to obtain by standard chemical synthesis alone. This matters because scalable molecular hardware needs a route from a single motif to a library of ordered variants.
+
+The supporting information explicitly lays out a nonanuclear design strategy in which two distinct \lbt{} units, denoted ``0'' and ``1'', are concatenated into a nine-site sequence. Unique short linkers based on permutations of \texttt{GASAG} are used between motifs so that each unit can fold independently while remaining PCR-addressable. Even if the supporting information stops short of proving a fully working nine-qubit processor, the conceptual move is significant. It reframes biomolecular quantum hardware as something that can be constructed by standard gene design, cloning, expression, and purification.
+
+This is one of the deepest lessons of the peptide-spin literature. In conventional coordination chemistry, increasing system size often means surrendering sequence-level addressability. In biomolecular engineering, sequence addressability is native. That does not solve coherence by itself, but it dramatically expands the design space for geometry, patterning, and modularity.
+
+\section{Surface assembly and transport: from molecules in solution to device-relevant geometry}
+The paper also addresses a classic bottleneck in molecular quantum technology: integration with surfaces. To this end it introduces a cysteine-modified version of the tag,
+\begin{center}
+\texttt{YIDTNNDGWYEGDELC},
+\end{center}
+called \lbtc{}, designed to anchor onto gold via a thiol-gold bond. Rosaleny \etal{} then study self-assembled monolayers on \au{} using AFM, MALDI-TOF, XPS, QCM, and NEGF-DFT transport calculations.
+
+Several experimentally established details are directly relevant to implementation:
+
+\begin{enumerate}[leftmargin=2em]
+\item The SAM growth is performed by overnight immersion of clean gold in buffered \lbtc{} solution containing TbCl$_3$, NaCl, HEPES, and TCEP, followed by rinsing.
+\item AFM suggests homogeneous coverage rather than gross aggregation.
+\item MALDI-TOF confirms peptide integrity on the surface, even though the lanthanide itself is not retained through ionization.
+\item XPS detects terbium and therefore supports the presence of the metal complex on the surface.
+\item QCM yields a coverage estimate in the rough range of 80--116\% of a nominal full monolayer, depending on geometric assumptions.
+\item NEGF-DFT on a peptide junction between two \au{} electrodes finds transmission peaks near $E-E_F \approx -0.3$~eV, indicating that gating or sufficiently strong bias would likely be required for appreciable conductance.
+\end{enumerate}
+
+Just as important is the paper's physical interpretation of transport. The local density of states associated with the main transmission feature is concentrated largely on the peptide backbone amide $\pi$ orbitals. This suggests that conduction can, at least in principle, sample regions geometrically close to the coordinated lanthanide without necessarily passing through the lanthanide-centered magnetic orbital itself. That is precisely the type of geometry needed for electrical spin readout schemes that avoid complete magnetic-quenching of the transport channel.
+
+\section{Implementation insights already visible in the peptide platform}
+One of the strongest supporting-information sections in the 2017 study is the optimization strategy for lowering spin-vibrational coupling. The authors recommend a two-stage program:
+
+\begin{enumerate}[leftmargin=2em]
+\item Use inexpensive force-field and normal-mode analysis to identify thermally populated modes and their structural distortions.
+\item Compute how those distortions perturb the spin levels, then redesign only the amino acids most responsible for harmful low-energy motion.
+\end{enumerate}
+
+This design philosophy is worth retaining because it is realistic. It does not pretend that a single heroic \emph{ab initio} calculation solves the whole chemistry problem. It instead combines cheap screening, targeted spectroscopy, and iterative library refinement. That workflow is directly reusable in the more advanced architecture developed below.
+
+\section{Current limitations of the peptide platform}
+A rigorous paper should state the limitations as clearly as the achievements.
+
+\begin{enumerate}[leftmargin=2em]
+\item The measured coherence times remain short in absolute quantum-computing terms.
+\item Most of the platform operates only at cryogenic temperature in the reported experiments.
+\item Surface transport calculations are promising but not a direct demonstration of single-molecule qubit readout.
+\item The nonanuclear design is a design blueprint, not a demonstrated nine-qubit coherent register.
+\item Peptide crystallography proved difficult in the reported work.
+\end{enumerate}
+
+These limitations matter because they tell us what any 2026 extension must fix. A forward-looking architecture that ignores them is fantasy. A credible architecture uses them to decide where control should be inserted, what must remain chemically rigid, and how device interfacing should proceed.
+
+\chapter{Compartmental Ion-Gated Control as a Design Principle}
+
+\section{Compartmental control picture}
+A useful starting point is a two-compartment picture in which one control volume is ion poor, the other ion rich, and the two are connected by a gated junction. In that picture, ionic densities define a trajectory through control space, the junction regulates communication between compartments, and protein-ion complexes act as qubit-bearing units coupled to the resulting electrochemical environment. In modern language, this is best understood as a compartmental quantum-control architecture rather than as a literal biochemical cartoon.
+The value of this picture is that it encodes a single design intuition: ionic state, geometric coupling, and quantum dynamics should be treated as one control problem.
+
+\section{The first essential reinterpretation}
+Read literally, such a picture is too ambiguous to implement. A lanthanide-binding peptide exposed to large uncontrolled ionic changes could suffer competition for acidic residues, altered protonation, modified hydration shells, or increased dielectric and magnetic noise. If those effects occur in the first coordination sphere, the qubit may become chemically or spectroscopically ill-defined.
+
+The correct interpretation, therefore, is \emph{not}:
+\begin{quote}
+``Change local ion concentration around the lanthanide center to encode the qubit.''
+\end{quote}
+
+The technically plausible interpretation is:
+\begin{quote}
+``Use controlled ion-density differences, currents, or membrane potentials to actuate a secondary physical mechanism that tunes the qubit or qubit-qubit coupling without destroying the coordinated metal site.''
+\end{quote}
+
+That secondary mechanism might be any of the following:
+
+\begin{enumerate}[leftmargin=2em]
+\item motion of a charged peptide or protein linker;
+\item electrostatic tuning of a nearby Stark-sensitive transition;
+\item modulation of hydrogen-bonding and hydration in a second-shell region;
+\item reconfiguration of a surface transport path;
+\item controlled displacement or rotation of two spin centers and therefore their dipolar coupling.
+\end{enumerate}
+
+\section{Why the ``gap junction'' analogy is useful}
+The gap-junction analogy is scientifically productive because it encourages a device-level interpretation. In biology, a gap junction is not itself the information-bearing state; it is a gated conduit that controls communication between compartments. Translating that into a molecular quantum setting suggests that one should design a nanojunction whose conductance, ionic flow, or electrostatic transmission can be tuned, and whose state changes the effective spin \ham{} of a neighboring peptide-qubit assembly.
+
+This is a much better role for ion control than direct chemical assault on the qubit center. A junction can convert ionic gradients into
+
+\begin{enumerate}[leftmargin=2em]
+\item an electric field,
+\item a pressure difference,
+\item a local pH shift,
+\item a redox boundary condition,
+\item or a conformational change of a nearby actuator.
+\end{enumerate}
+
+Each of those can, in turn, tune a spin qubit indirectly.
+
+\section{Ion-density frames as control frames}
+The idea of ion densities as frames in a trajectory is powerful once formalized. In quantum control, one frequently approximates time-dependent driving by piecewise-constant segments. That notion maps naturally onto a control vector
+\[
+\mathbf{u}_k =
+\left(
+c_{\mathrm{Na}^+},
+c_{\mathrm{K}^+},
+c_{\mathrm{Ca}^{2+}},
+\mathrm{pH},
+V_m,
+E_{\mathrm{gate}},
+B_1,
+\phi_{\mu w}
+\right)_k
+\]
+for the $k$-th time segment. The experiment then becomes a trajectory
+\[
+\mathbf{u}_1 \rightarrow \mathbf{u}_2 \rightarrow \cdots \rightarrow \mathbf{u}_N
+\]
+through control space. The ion densities are not the whole control vector, but they are a major part of it.
+
+This viewpoint gives the architecture a sharper interpretation. The device should be treated not as a static pair of compartments, but as a programmable electrochemical waveform generator coupled to a spin system.
+
+\section{Protein-ion complexes as qubits}
+The most conservative interpretation is to treat the qubit as a peptide-bound lanthanide center embedded in a local biomolecular environment. A broader 2026 perspective is to allow multiple qubit species:
+
+\begin{enumerate}[leftmargin=2em]
+\item lanthanide-peptide electron-spin qubits;
+\item optically addressable protein triplet or radical qubits;
+\item molecular-spin sensing reporters adjacent to lanthanide control units;
+\item nuclear-spin ancillas coupled to the electronic spin center.
+\end{enumerate}
+
+The remainder of the paper focuses on the first option because it is directly grounded in experiment, while leaving room for hybridization with later biological-qubit developments.
+
+\chapter{Proposed Architecture: The Ion-Gated Biomolecular Quantum Cell}
+
+\section{Architecture in one sentence}
+The proposed device is a peptide- or protein-scaffolded spin-qubit array positioned near a controllable ionic nanojunction such that electrochemical state changes modulate qubit frequencies and couplings through secondary electrostatic or conformational channels rather than by destabilizing the lanthanide coordination sphere.
+
+\section{Physical layers of the device}
+The architecture is easiest to understand as a stack of layers:
+
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Qubit layer.} Peptide-bound lanthanide centers or closely related biomolecular spin units.
+\item \textbf{Scaffold layer.} Protein, peptide polymer, DNA-origami, hydrogel, or surface-anchored support that fixes relative geometry.
+\item \textbf{Actuation layer.} Charged linkers, pH-sensitive residues, electromechanical peptides, membrane proteins, or electroactive polymers that convert ionic state into structural or field changes.
+\item \textbf{Junction layer.} A controllable nanochannel or membrane-like constriction between two electrolyte control volumes.
+\item \textbf{Interface layer.} Metallic electrodes, superconducting resonators, optical paths, or spintronic transport contacts.
+\item \textbf{Cryogenic and microwave layer.} The external apparatus needed to preserve coherence and execute pulsed control.
+\end{enumerate}
+
+The most important design principle is separation of responsibilities. The qubit layer should be chemically conservative and low-noise. The actuation and junction layers may be more dynamic, but they should couple through geometry or fields, not through destructive chemistry.
+
+\section{Two device variants}
+There are at least two realistic implementations of the general idea.
+
+\subsection{Surface-bound variant}
+In the surface-bound variant, \lbtc{}-like peptides or protein constructs are immobilized on gold or another compatible substrate. A nanochannel or nanopore in a thin dielectric or polymer layer above the surface connects two ionic reservoirs. The ionic state of the reservoirs controls the electric field and local charge distribution near the surface-mounted peptide assembly. Readout is transport-based or resonator-based.
+
+This is the closest descendant of the 2017 platform because it reuses the SAM logic and transport framework.
+
+\subsection{Soft-matter microcompartment variant}
+In the soft-matter variant, peptide-ion complexes are mounted in or on an artificial vesicle, membrane, hydrogel compartment, or protein superstructure. The two ``cells'' in the sketch are literal microfluidic or vesicular control volumes. A junction protein, nanopore, or synthetic channel connects them. The ionic gradient creates a membrane potential or local electrostatic asymmetry that shifts the geometry of a nearby qubit pair.
+
+This variant adheres more closely to a compartmental control picture, but it is technically harder to characterize with precision than a surface-bound device.
+
+\section{A plausible first-generation cell-pair module}
+The best first-generation implementation is a hybrid of the two variants. Consider two electrolyte reservoirs separated by a nanoporous membrane. On one side of the membrane, but mechanically anchored to a rigid gold-supported platform, sits a two-qubit \dalbt{}-derived module. Nearby sits a voltage- or pH-responsive charged peptide hairpin whose state controls the relative orientation or distance between the two lanthanide centers. The nanopore current changes the electrostatic boundary condition and therefore the hairpin conformation. The qubit pair is driven by microwave pulses and read either by pulsed EPR or by transport through a nearby peptide junction.
+
+This arrangement keeps the qubits on a comparatively rigid, characterizable substrate while still enabling compartmental ionic control.
+
+\section{Redrawn conceptual schematic}
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  >=Latex,
+  scale=1.0,
+  every node/.style={transform shape},
+  ctrl/.style={draw, line width=0.9pt, fill opacity=0.9},
+  box/.style={draw, rounded corners=2pt, line width=0.8pt, align=center},
+  ion/.style={circle, inner sep=0pt, minimum size=4pt, draw=none},
+  annot/.style={font=\small, align=center}
+]
+  \coordinate (J) at (0,0.45);
+
+  \draw[ctrl, fill=blue!7, draw=blue!60!black] (-3.45,0.65) ellipse (2.1 and 1.4);
+  \draw[ctrl, fill=red!5, draw=red!60!black] (3.45,0.65) ellipse (2.1 and 1.4);
+
+  \node[annot, fill=white, inner sep=1.2pt, text width=2.8cm] at (-3.45,2.5) {Low-ion\\control volume};
+  \node[annot, fill=white, inner sep=1.2pt, text width=2.8cm] at (3.45,2.5) {High-ion\\control volume};
+
+  \fill[blue!55] (-4.25,0.9) circle (0.06);
+  \fill[blue!45] (-3.6,0.35) circle (0.05);
+  \fill[blue!40] (-2.95,1.05) circle (0.05);
+  \fill[blue!35] (-2.45,0.05) circle (0.05);
+  \begin{scope}
+    \clip (3.45,0.65) ellipse (2.1 and 1.4);
+    \fill[red!7] (1.2,-0.9) rectangle (5.8,2.3);
+    \foreach \x in {1.40,1.48,...,5.48} {
+      \foreach \y in {-0.56,-0.48,...,1.84} {
+        \pgfmathsetmacro{\gOne}{0.98*exp(-0.5*(pow((\x-2.46)/0.34,2) + pow((\y-1.16)/0.26,2)))}
+        \pgfmathsetmacro{\gTwo}{0.92*exp(-0.5*(pow((\x-3.14)/0.38,2) + pow((\y-0.36)/0.29,2)))}
+        \pgfmathsetmacro{\gThree}{0.88*exp(-0.5*(pow((\x-3.90)/0.34,2) + pow((\y-0.98)/0.27,2)))}
+        \pgfmathsetmacro{\gFour}{0.82*exp(-0.5*(pow((\x-4.18)/0.31,2) + pow((\y-0.06)/0.24,2)))}
+        \pgfmathsetmacro{\gBase}{0.24*exp(-0.5*(pow((\x-3.48)/1.35,2) + pow((\y-0.66)/0.92,2)))}
+        \pgfmathsetmacro{\gMix}{min(1.05,\gBase + \gOne + \gTwo + \gThree + \gFour)}
+        \pgfmathsetmacro{\tone}{8 + 82*\gMix/1.05}
+        \pgfmathsetmacro{\alpha}{0.16 + 0.66*\gMix/1.05}
+        \fill[draw=none, red!\tone, opacity=\alpha] (\x,\y) circle (0.058);
+      }
+    }
+    \foreach \cx/\cy/\ax/\ay in {
+      2.46/1.16/0.28/0.22,
+      3.14/0.36/0.31/0.24,
+      3.90/0.98/0.28/0.22,
+      4.18/0.06/0.25/0.19
+    } {
+      \pgfmathsetmacro{\axMid}{1.65*\ax}
+      \pgfmathsetmacro{\ayMid}{1.65*\ay}
+      \pgfmathsetmacro{\axOuter}{2.30*\ax}
+      \pgfmathsetmacro{\ayOuter}{2.30*\ay}
+      \draw[red!82!black, opacity=0.55, line width=0.35pt] (\cx,\cy) ellipse [x radius=\ax, y radius=\ay];
+      \draw[red!78!black, opacity=0.36, line width=0.32pt] (\cx,\cy) ellipse [x radius=\axMid, y radius=\ayMid];
+      \draw[red!72!black, opacity=0.24, line width=0.28pt] (\cx,\cy) ellipse [x radius=\axOuter, y radius=\ayOuter];
+    }
+  \end{scope}
+  \draw[draw=red!60!black, line width=0.9pt] (3.45,0.65) ellipse (2.1 and 1.4);
+
+  \node[box, fill=gray!18, minimum width=2.8cm, minimum height=0.65cm] (junction) at (J) {\small gated nanojunction};
+  \draw[->, thick] (2.15,1.25) -- (0.95,1.25);
+  \node[annot, fill=white, inner sep=1pt, anchor=south] at (1.55,1.38) {ionic flow / field};
+
+  \node[box, fill=yellow!18, minimum width=3.1cm, minimum height=0.82cm] (act) at (0,-1.15) {\small electrostatic\\actuator};
+  \draw[->, thick] (junction.south) -- (act.north);
+
+  \node[box, fill=green!10, minimum width=1.75cm, minimum height=0.86cm] (q1) at (-1.55,-2.5) {\small qubit 1};
+  \node[box, fill=green!10, minimum width=1.75cm, minimum height=0.86cm] (q2) at (1.55,-2.5) {\small qubit 2};
+  \draw[->, thick] (act.south west) .. controls (-0.8,-1.65) and (-1.15,-2.0) .. (q1.north);
+  \draw[->, thick] (act.south east) .. controls (0.8,-1.65) and (1.15,-2.0) .. (q2.north);
+
+  \draw[very thick, orange!75!black] (q1.east) -- (q2.west);
+  \node[annot, fill=white, inner sep=1.5pt] at (0,-3.15) {tunable linker / coupler};
+
+  \node[box, fill=black!5, minimum width=7.2cm, minimum height=0.68cm] (surf) at (0,-4.25) {\small rigid scaffold / surface / resonator interface};
+  \draw[->, thick] (q1.south) -- (-1.55,-3.9);
+  \draw[->, thick] (q2.south) -- (1.55,-3.9);
+\end{tikzpicture}
+\caption{Conceptual schematic of an ion-gated biomolecular quantum cell. The ion-density difference is not assumed to encode the qubit directly. Instead, the control volumes and gated nanojunction drive an electrostatic or conformational actuator that tunes the qubit pair mounted on a more stable scaffold.}
+\end{figure}
+
+\section{Why indirect actuation is superior to direct ionic forcing}
+The chemical reason is straightforward. \lbt{} motifs rely on acidic and amide-containing residues to coordinate the lanthanide. Their spin properties also depend on local geometry, hydration, and electrostatics. A large uncontrolled ionic perturbation can therefore:
+
+\begin{enumerate}[leftmargin=2em]
+\item compete for binding or screen the binding pocket;
+\item alter protonation of nearby acidic residues;
+\item broaden spectral lines through stochastic charge noise;
+\item increase dielectric fluctuations;
+\item or reshape the peptide fold itself.
+\end{enumerate}
+
+By contrast, indirect actuation can preserve the first-shell ligand geometry while still changing relevant spin parameters. Distance, orientation, and local electric field are enough to change dipolar couplings, Zeeman splittings, tunnel splittings, or transport amplitudes. One does not need to chemically rewire the qubit every time one wants to perform a gate.
+
+\chapter{Integrated Design Stack: RFdiffusion3 and ThermoGFN-IF}
+
+\section{Why the original peptide platform now admits a stronger design loop}
+The 2017 peptide platform already gave a credible local qubit motif, but it left geometry engineering and thermal robustness underpowered. The missing capability was not merely ``better protein design'' in the abstract. It was the ability to hold a fixed metal-binding or actuator motif in place while generating surrounding protein structure at all-atom resolution, and then to optimize the resulting sequence against a fused objective that explicitly values rigidity, ligand awareness, and robustness. RFdiffusion3 and ThermoGFN-IF-style optimization supply precisely those missing pieces \cite{rfdiffusion32025,thermogfnif2026}.
+
+The strategic consequence is important. Earlier versions of this architecture relied heavily on electrochemical transport to create useful interactions after synthesis. The revised architecture instead pushes much more structure into the molecule itself: RFdiffusion3 is used to create scaffolded local subnetworks with preorganized geometry, and ThermoGFN-IF-style refinement is used to rigidify the resulting sequences and preserve the relevant bound states. Ion transport then becomes a higher-level biasing and routing resource rather than the sole source of logical structure.
+
+\section{RFdiffusion3 as the all-atom scaffold generator}
+RFdiffusion3 is unusually well matched to this problem because it generates proteins in an explicitly all-atom setting and can condition on functional motifs, ligands, nucleic acids, and other non-protein constellations of atoms \cite{rfdiffusion32025}. In the RFdiffusion3 paper, motif or binding-partner coordinates are inserted directly into the developing noise cloud, classifier-free guidance improves adherence to conditioning information, and the model is shown to support atom-level hydrogen-bond and contact constraints while remaining substantially more efficient than earlier diffusion-based design systems. Those properties are precisely what a protein-ion quantum architecture requires.
+
+For the present platform, the fixed conditioning payload should not be a generic active-site motif. It should be a structured tuple
+\[
+\mathcal{M}_{\mathrm{core}}=
+\big(
+M_{\mathrm{Ln}},
+M_{\mathrm{act}},
+M_{\mathrm{anchor}},
+M_{\mathrm{ctx}},
+M_{\mathrm{gj}}
+\big),
+\]
+where $M_{\mathrm{Ln}}$ is the lanthanide- or ion-binding qudit core, $M_{\mathrm{act}}$ is the secondary-shell actuator motif, $M_{\mathrm{anchor}}$ is any membrane-, pore-, or scaffold-attachment motif, $M_{\mathrm{ctx}}$ is optional context such as a nearby ligand, lipid headgroup, or synthetic nanopore element, and $M_{\mathrm{gj}}$ is an optional gap-junction-control motif. The latter may encode a direct connexin-binding interface, an upstream-gating-protein interface, or a bifunctional interface that can engage both. RFdiffusion3 can then be asked to generate protein material around that tuple while preserving the exact local geometry that matters most.
+
+This reframes motif scaffolding for quantum hardware. The goal is not only to stabilize a catalytic residue geometry; it is to preserve the spin-bearing coordination environment, the actuator leverage arm, and the spacing or orientation relationships required for local entangling couplings. In practice, three RFdiffusion3 use cases are especially relevant:
+
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Single-complex encapsulation.} Wrap a single protein-ion complex in a protective local fold that shields the first coordination sphere from solvent and ion noise while exposing only the intended control and readout interfaces.
+\item \textbf{Local subnetwork scaffolding.} Scaffold two to six complexes into a rigid protein framework with designed distances, angular relationships, and optional symmetry, so that useful couplings exist before any long-range transport is invoked.
+\item \textbf{Interface-aware auxiliary design.} Scaffold pore-adjacent, membrane-adjacent, or gap-junction-adjacent support proteins that hold qudit modules near the control interface without requiring the qudit core itself to be embedded in the noisiest part of the electrochemical environment.
+\end{enumerate}
+
+The second use case is the most important computationally. A scaffolded subnetwork is where local logical structure is born. If two or more complexes are placed in a rigid framework whose internal couplings are already appreciable, then ion transport no longer has to create logic from scratch; it only has to bias, select, synchronize, or weakly reroute couplings that already exist.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Latex, every node/.style={transform shape}, scale=0.90]
+  \tikzset{
+    stage/.style={draw, rounded corners=3pt, minimum width=3.0cm, minimum height=1.05cm, align=center},
+    outbox/.style={draw, rounded corners=2pt, fill=yellow!15, minimum width=3.1cm, minimum height=0.85cm, align=center}
+  }
+  \node[font=\small\bfseries] at (4.1,1.7) {Generative de novo design};
+  \node[font=\small\bfseries] at (10.3,1.7) {Validation};
+
+  \node[stage, fill=blue!8] (m1) at (-2.0,0) {Fixed motifs\\lanthanide core\\actuator residues\\anchor context};
+  \node[stage, fill=green!8] (m2) at (1.75,0) {RFdiffusion3\\all-atom motif\\scaffolding};
+  \node[stage, fill=orange!10] (m3) at (6.2,0) {ThermoGFN-IF\\GFlowNet-finetuned\\inverse-folder};
+  \node[stage, fill=purple!8] (m4) at (10.8,0) {RosettaFold3\\structure\\validation};
+  \node[stage, fill=red!8] (m5) at (10.8,-2.0) {UMA\\MLIP trajectory\\validation};
+  \node[stage, fill=teal!10] (m6) at (10.8,-4.0) {InfGCN\\framewise electron-density\\validation};
+
+  \draw[->, thick] (m1) -- (m2);
+  \draw[->, thick] (m2) -- (m3);
+  \draw[->, thick] (m3) -- (m4);
+  \draw[->, thick] (m4) -- (m5);
+  \draw[->, thick] (m5) -- (m6);
+  \draw[->, thick, bend left=25] (m6.west) to node[below, sloped] {\small validation-guided redesign} (m3.south);
+
+  \node[outbox] (out1) at (1.75,-2.0) {scaffolded local\\qudit module};
+  \node[outbox] (out2) at (10.8,-5.8) {validated thermostable\\local logical block};
+  \node[outbox] (out3) at (10.8,-7.4) {cell-interface\\candidate};
+
+  \draw[->, thick] (m2) -- (out1);
+  \draw[->, thick] (m6) -- (out2);
+  \draw[->, thick] (out2) -- (out3);
+\end{tikzpicture}
+\caption{Integrated design loop for the architecture. RFdiffusion3 and ThermoGFN-IF are the two generative stages: RFdiffusion3 builds all-atom motif scaffolds around the qudit payload, and ThermoGFN-IF is the already fine-tuned inverse-folding model used to redesign the resulting sequences at deployment. Any SPURS, BioEmu, or UMA reward shaping has already been absorbed during ThermoGFN-IF training and is not queried online in this inference path. RosettaFold3, UMA, and InfGCN then act as successive validation layers for structure recapitulation, atomistic trajectory plausibility, and time-indexed electron-density consistency.}
+\end{figure}
+
+\section{ThermoGFN-IF as the sequence-redesign stage}
+RFdiffusion3 solves the geometry problem more directly than the sequence problem. Once an all-atom scaffold exists, one still needs sequences that hold the qudit core in place, preserve the ligand or ion context, and reduce the low-frequency structural fluctuations that feed decoherence. In the pipeline, ThermoGFN-IF is the second and last \emph{generative} stage: a base inverse-folding model such as ADFLIP, or a LigandMPNN-like alternative in ligand-rich settings, is fine-tuned offline with a GFlowNet-style objective and then deployed as the ThermoGFN-IF sequence model \cite{thermogfnif2026}. At the level of the architecture shown in Fig.~4.2, RosettaFold3, UMA, and InfGCN belong to a downstream validation stack rather than to the generative design stack \cite{rf32025,uma2025,infgcn2023}.
+
+This distinction matters because the oracle families used during fine-tuning are \emph{not} active inside ThermoGFN-IF after training has finished. In the ThermoGFN-IF methodology, SPURS-, BioEmu-, and UMA-type oracle signals shape the offline fine-tuning objective, but the deployed ThermoGFN-IF model is then used as an oracle-free inverse-folding generator. Only after that redesigned sequence has been emitted do we send it through explicit structural, dynamical, and electron-density validation.
+
+The most portable elements are the following:
+
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Sequence redesign.} ThermoGFN-IF is the trained inverse-folding model used at deployment to propose redesigned sequences for the RFdiffusion3 scaffold; its training may have used SPURS-, BioEmu-, and UMA-type oracle rewards, but those oracles are not queried online during this inference step \cite{thermogfnif2026}.
+\item \textbf{Structure validation.} RosettaFold3 re-predicts the structure of the redesigned sequence to test whether the scaffolded motif geometry is actually recapitulated in a strong open-source structure predictor \cite{rf32025}.
+\item \textbf{Trajectory validation.} UMA provides the next layer of scrutiny by checking whether atomistic trajectories remain physically coherent around the ion pocket and actuator environment \cite{uma2025}.
+\item \textbf{Electron-density validation.} InfGCN is then applied framewise to UMA snapshots to reconstruct time-indexed electron-density fields and expose density rearrangements that would be invisible in a purely geometric screen \cite{infgcn2023}.
+\item \textbf{Promotion criterion.} Only candidates that survive all three validation layers should move on to spectroscopy, control fitting, and experimental interface work.
+\end{enumerate}
+
+For protein-ion quantum modules, the mathematically relevant object is a \emph{training-time} reward used to fine-tune the base inverse-folding model. Let $p_{\theta}(s\mid B,M)$ denote the sequence distribution over a scaffold backbone $B$ and local context $M$, initialized from a base inverse-folder and then fine-tuned into ThermoGFN-IF. A faithful GFlowNet-style statement is that the terminal-sequence law of the trained model should approximate a reward-proportional distribution
+\begin{equation}
+\label{eq:trainobjective}
+p_{\theta^\star}(s\mid B,M)
+\propto
+\mathcal R_{\mathrm{train}}(s;B,M),
+\end{equation}
+with training reward
+\begin{equation}
+\label{eq:trainreward}
+\mathcal R_{\mathrm{train}}(s;B,M)
+=
+\exp\!\Bigg[
+\begin{aligned}
+&\lambda_{\mathrm{therm}} \hat z_{\mathrm{therm}}^{\mathrm{oracle}}
++ \lambda_{\mathrm{ctx}} \hat z_{\mathrm{ctx}}^{\mathrm{oracle}}
++ \lambda_{\mathrm{occ}} \hat z_{\mathrm{ion}}^{\mathrm{oracle}} \\
+&+ \lambda_{\mathrm{kin}} \hat z_{\mathrm{kin}}^{\mathrm{oracle}}
+- \lambda_{\mathrm{soft}} \hat z_{\mathrm{soft}}^{\mathrm{oracle}}
+- \lambda_{\mathrm{OOD}} z_{\mathrm{OOD}}
+\end{aligned}
+\Bigg].
+\end{equation}
+The hatted terms are oracle-derived quantities available during fine-tuning, not deployment-time quantities inside ThermoGFN-IF. Depending on the exact ThermoGFN-IF instantiation, they may aggregate SPURS-like thermostability signals, BioEmu-like dynamics signals, UMA-like physical rescoring, and additional context- or occupancy-aware labels. Once fine-tuning is complete, however, deployment is simply
+\[
+s \sim p_{\theta^\star}(\cdot\mid B,M),
+\]
+followed by the external validation stack. 
+
+The electron-density stage should also be described carefully. InfGCN is not itself a trajectory generator; it is an equivariant electron-density predictor. In this pipeline, time dependence comes from the UMA trajectory, while InfGCN maps each saved UMA snapshot $(X_t,Z_t)$ to a density field
+\[
+\rho_t(\mathbf r) \approx \Phi_{\mathrm{InfGCN}}(X_t,Z_t)(\mathbf r).
+\]
+That yields a time-lapse density movie over the redesigned local module and makes it possible to screen not only for geometric persistence but also for fluctuations in electron density around the ion pocket, second shell, and actuator region.
+
+We must also be careful about operating temperature. ThermoGFN-IF-style optimization can plausibly improve \emph{predicted} thermostability, ion-pocket rigidity, and interface affinity. That is enough to expect a broader experimental window and less conformationally driven noise. It is not, by itself, proof of room-temperature coherent quantum computation in human cells. A rigorous approach should make that distinction explicit, and thus we must do so here. Higher computational operating temperatures are very realistic to expect as an outcome, but it if not certain that we will reach the ideal temperatures we want from this methodology alone. Thus, we take it one step further, and implement topological error correction. 
+
+\section{From isolated complexes to scaffolded subnetworks}
+The most consequential benefit of combining RFdiffusion3 and ThermoGFN-IF is not merely that single qudits become better behaved. It is that one can design \emph{local subnetworks} of protein-ion complexes whose internal geometry is strong enough to support logical encoding before the architecture reaches for long-range ionic transport. Those subnetworks may be dimers, trimers, plaquettes, or small redundant clusters, depending on the code and control strategy.
+
+The design principle is to impose a coupling hierarchy
+\[
+\|H_{\mathrm{local}}\| \gg \|H_{\mathrm{inter}}\|,
+\]
+where $H_{\mathrm{local}}$ contains scaffold-hard-wired interactions inside a subnetwork and $H_{\mathrm{inter}}$ contains weaker interactions routed through longer linkers, membranes, or intercellular conduits. When that hierarchy holds, long-range ionic control no longer has to generate every entangling edge dynamically. It only needs to activate or bias couplings between already encoded local modules.
+
+\begin{lemma}[Local logical reduction under coupling hierarchy]
+\label{lem:localreduction}
+Let
+\[
+H = \sum_{\alpha=1}^{m} H_{\alpha}^{\mathrm{local}} + \varepsilon V
+\]
+act on $m$ scaffolded subnetworks, where each $H_{\alpha}^{\mathrm{local}}$ has a chosen code subspace $\Code_{\alpha}$ separated from the rest of the spectrum by a gap at least $\Delta_{\alpha}>0$. If $\varepsilon \|V\| \ll \Delta := \min_{\alpha}\Delta_{\alpha}$, then there exists an effective Hamiltonian $H_{\mathrm{eff}}$ acting on $\Code=\bigotimes_{\alpha}\Code_{\alpha}$ such that, over gate times $t=O(1/\varepsilon)$, the exact dynamics restricted to $\Code$ differ from those generated by $H_{\mathrm{eff}}$ by at most $O(\varepsilon/\Delta)$.
+\end{lemma}
+
+\begin{proof}
+This is the standard perturbative block-diagonalization statement behind Schrieffer-Wolff reduction. Because the direct sum of the local code spaces is spectrally separated from orthogonal excitations by $\Delta$, the perturbation $\varepsilon V$ can be removed order by order from the off-block-diagonal sector. The resulting effective Hamiltonian acts only inside $\Code$ and differs from the exact projected evolution by terms controlled by $\varepsilon/\Delta$ over times of order $1/\varepsilon$.
+\end{proof}
+
+Lemma~\ref{lem:localreduction} captures the main engineering reason to build RFdiffusion3-scaffolded subnetworks. If internal scaffold couplings define robust local code spaces, then inter-module routing can be weaker, slower, and more selective without destroying the computational abstraction. That is exactly how the architecture reduces its dependence on long-range ion transport.
+
+\section{A concrete integrated workflow}
+The practical design workflow is now clear.
+
+\begin{enumerate}[leftmargin=2em]
+\item Specify a fixed motif payload containing the ion-binding core, secondary-shell actuator residues, and any membrane-, nanopore-, or gap-junction-adjacent anchor elements.
+\item Use RFdiffusion3 to generate one-complex and few-complex backbones that respect the exact motif geometry while exploring local topology, symmetry, and burial patterns.
+\item Apply the trained ThermoGFN-IF model as the sequence-redesign stage on those scaffolds.
+\item Re-predict the redesigned candidates with RosettaFold3 and discard any sequence whose predicted fold or motif geometry drifts materially from the intended scaffold in terms of RMSD.
+\item Run UMA trajectory validation on the RosettaFold3-passing shortlist to test atomistic stability of the ion pocket, actuator region, and local scaffold couplings.
+\item Apply InfGCN framewise to the retained UMA trajectories to reconstruct time-indexed electron-density fields and reject candidates with unstable density behavior near the active coordination environment.
+\item Promote candidates only if they simultaneously preserve metal-pocket geometry, improve predicted thermostability (and affinity if needed), retain the intended bound-state context, and remain stable across the RosettaFold3, UMA, and InfGCN validation layers.
+\item Carry the finalists into pulsed EPR, temperature-ramp spectroscopy, and electrochemical-actuation calibration.
+\end{enumerate}
+
+The deeper point is that de novo protein design is no longer peripheral to this research program. It is the mechanism by which the architecture becomes modular, locally redundant, and less dependent on fragile transport-mediated interactions.
+
+\chapter{Microscopic Model and Quantum-Control Formalism}
+
+\section{Single-qubit Hamiltonian}
+For a peptide-bound lanthanide center, a useful starting point is an effective single-qubit or single-qudit \ham{}
+\begin{equation}
+H_i^{(0)} =
+\mu_B \mathbf{B}_i \cdot \mathbf{g}_i \cdot \mathbf{S}_i
++ \mathbf{S}_i \cdot \mathbf{A}_i \cdot \mathbf{I}_i
++ D_i\left(S_{iz}^2 - \frac{S_i(S_i+1)}{3}\right)
++ E_i\left(S_{ix}^2 - S_{iy}^2\right),
+\end{equation}
+where $\mathbf{g}_i$ captures anisotropic Zeeman response, $\mathbf{A}_i$ hyperfine structure if a nuclear spin is relevant, and $D_i,E_i$ encode the effective zero-field splitting or analogous crystal-field reduction appropriate to the chosen two-level subspace.
+
+In practice, one rarely uses the full high-dimensional lanthanide manifold as the computational basis. One identifies a low-energy subspace with sufficiently isolated transitions and projects into it. The peptide-spin experiments effectively take that route when interpreting EPR-driven transitions and coherence data.
+
+\section{Pairwise coupling Hamiltonian}
+For two nearby centers $i$ and $j$, the coupling can be modeled as
+\begin{equation}
+H_{ij} =
+J_{ij}^{\mathrm{ex}} \, \mathbf{S}_i \cdot \mathbf{S}_j
++ \mathbf{S}_i \cdot \mathbf{D}_{ij}^{\mathrm{dip}} \cdot \mathbf{S}_j
++ J_{ij}^{\mathrm{an}} S_{iz} S_{jz},
+\end{equation}
+where the first term is isotropic exchange or superexchange, the second is the dipolar tensor, and the third stands in for residual anisotropic coupling after projection into the computational basis. At the $\sim 20$~\AA{} separation reported for double-\lbt{} constructs, pure dipolar effects are already non-negligible, while linker-mediated or transport-mediated exchange may become relevant if the geometry is deliberately engineered.
+
+\section{How ionic control enters the Hamiltonian}
+The key contribution of the present manuscript is to treat ionic state as a control input to \emph{secondary} parameters. Let $\mathbf{c}(t)$ denote the vector of ionic and electrochemical variables. Then a practical model is
+\begin{align}
+\omega_i(t) &= \omega_i^{(0)} + \alpha_i \, \delta E_i[\mathbf{c}(t)] + \beta_i \, \delta \varepsilon_i[\mathbf{c}(t)] + \gamma_i \, \delta p_i[\mathbf{c}(t)], \\
+J_{ij}(t) &= J_{ij}^{(0)} + \eta_{ij}\,\delta r_{ij}[\mathbf{c}(t)] + \zeta_{ij}\,\delta \theta_{ij}[\mathbf{c}(t)] + \xi_{ij}\,\delta E_{ij}[\mathbf{c}(t)],
+\end{align}
+where $\delta E_i$ is a local electric-field shift, $\delta \varepsilon_i$ is a dielectric perturbation, $\delta p_i$ is a protonation-related perturbation in a secondary shell, and $\delta r_{ij}, \delta\theta_{ij}$ are ionic-actuation-induced changes in inter-spin distance and orientation.
+
+This representation intentionally refuses to claim more precision than the physical system deserves at the current stage. The control dependence must be learned from computation and experiment. But the structure of the problem is clear: the ionic state drives mechanical and electrostatic variables, which drive spin parameters.
+
+\section{Open-system dynamics}
+Because the platform is soft-matter-adjacent and likely noisy, the appropriate dynamical description is open-system:
+\begin{equation}
+\dot{\rho} = -\frac{i}{\hbar}[H(t),\rho]
++ \sum_i \Gamma_{1,i}\mathcal{D}[\sigma_i^-]\rho
++ \sum_i \Gamma_{\phi,i}\mathcal{D}[\sigma_i^z]\rho
++ \sum_{i<j}\Gamma_{ij}^{\mathrm{corr}}\mathcal{D}[L_{ij}]\rho .
+\end{equation}
+Here $\mathcal{D}[L]\rho = L\rho L^\dagger - \tfrac{1}{2}\{L^\dagger L,\rho\}$ is the Lindblad dissipator. The ionic environment enters twice: once in the coherent \ham{} via tunable fields and couplings, and once in the dissipation rates via charge noise, spectral diffusion, proton motion, or fluctuating hydration.
+
+This dual role is a core design tension. The very control channel that provides tunability can also provide decoherence. The architecture is viable only if the \emph{gain} in tunable coupling is larger than the \emph{penalty} in added noise.
+
+\section{Gate conditions}
+After projecting into a qubit basis, an entangling gate is obtained when the time-integrated conditional phase or exchange area reaches the appropriate value. For a controlled-phase style interaction,
+\begin{equation}
+\Phi_{ZZ} = \int_0^\tau J_{ZZ}(t)\, dt \approx \frac{\pi}{4}
+\end{equation}
+up to local rotations. For an iSWAP-like exchange gate,
+\begin{equation}
+\Theta_{XY} = \int_0^\tau J_{XY}(t)\, dt \approx \frac{\pi}{2}.
+\end{equation}
+Within this framework, the ion-density trajectory does not by itself implement the gate. It shapes $J_{ZZ}(t)$ or $J_{XY}(t)$ through the actuator layer, while microwave control handles single-qubit rotations and synchronization.
+
+\section{Control frames and ion-density trajectories}
+The idea of ion-density frames becomes mathematically useful if one discretizes the control problem. Let the experiment be divided into $N$ windows of duration $\Delta t_k$. During each window, the control vector is approximately constant:
+\[
+\mathbf{u}(t) = \mathbf{u}_k \qquad \text{for } t \in [t_k, t_k+\Delta t_k].
+\]
+Then the total unitary, ignoring decoherence for the moment, is
+\[
+U(T) = \prod_{k=N}^{1} \exp\left[-\frac{i}{\hbar}H(\mathbf{u}_k)\Delta t_k\right].
+\]
+This provides a natural quantum-circuit interpretation: a sequence of electrochemical ``frames'' becomes a compiled pulse program in a larger control alphabet.
+
+\section{Transport channel model}
+Whenever a readout path exists through a peptide or nearby molecular backbone, the transport current may be approximated in Landauer form:
+\begin{equation}
+I_\sigma(V) = \frac{e}{h}\int T_\sigma(E,V)\left[f_L(E)-f_R(E)\right]dE.
+\end{equation}
+The 2017 transport calculations indicate that for the \lbtc{}/gold system the relevant transmission feature sits near $-0.3$~eV relative to the Fermi level. This does not yet provide a full spin-readout protocol, but it gives a starting point for designing gates, bias windows, and electrode materials. A future ion-gated device could exploit the same logic by allowing the electrochemical actuator to shift either the transport pathway or the magnetic splitting sensed by transport.
+
+\chapter{Implementation Roadmap}
+
+\section{Stage 0: decide what must remain fixed}
+The first engineering decision is not what to tune. It is what \emph{not} to tune. In this architecture, the following elements should initially be treated as fixed or slowly varying:
+
+\begin{enumerate}[leftmargin=2em]
+\item the first coordination sphere of the lanthanide center;
+\item the peptide motif responsible for reproducible folding;
+\item the anchoring chemistry to the substrate or scaffold;
+\item the microwave frequency window used for coherent spin manipulation.
+\end{enumerate}
+
+Everything else is a candidate control handle. This division sharply reduces design entropy.
+
+\section{Stage 1: molecular design rules}
+The peptide design rules should begin from an empirically supported strategy rather than from arbitrary de novo sequences.
+
+\subsection{Rule 1: preserve the canonical fold}
+Keep the core \lbt{} motif or conservative variants thereof as the qubit core. Place most exploratory mutation burden in secondary-shell residues, linkers, or actuator appendages.
+
+\subsection{Rule 2: separate qubit and actuator residues}
+Do not use the same residues both to coordinate the lanthanide and to mediate strong ionic actuation. The qubit pocket wants rigidity and reproducibility; the actuator wants sensitivity. Mixing those objectives is a design error.
+
+\subsection{Rule 3: use asymmetry intentionally}
+The \dalbt{} design logic should be generalized. Distinguishable spin centers are useful because they make selective addressing easier and reduce accidental resonant crosstalk.
+
+\subsection{Rule 4: treat linkers as quantum components}
+In this platform, linkers are not passive peptide filler. They determine distance, orientation, compliance, transport exposure, and actuator gain. Their design deserves the same seriousness as the metal-binding pocket.
+
+\section{Stage 2: computational screening stack}
+The existing peptide-spin work already suggests a practical screening methodology. In 2026 it should be expanded into a multiscale pipeline:
+
+\begin{enumerate}[leftmargin=2em]
+\item Specify a fixed motif payload around known \lbt{} or \dalbt{}-like ion-binding cores, secondary-shell actuator residues, and adjacent membrane or pore anchors.
+\item Use RFdiffusion3 to scaffold one-complex and few-complex local backbones around that payload while preserving the exact coordination geometry of the qudit core.
+\item Recover or initialize sequences with an all-atom context-aware sequence model, then redesign them with a ThermoGFN-IF-style inverse-folder whose \emph{training} was shaped to favor thermostability, ion-pocket integrity, ion-binding affinity and context retention. 
+\item Use force fields and enhanced-sampling molecular dynamics to estimate equilibrium structures and low-energy modes for the shortlisted candidates.
+\item Apply normal-mode or quasi-harmonic analysis to identify motion coupled to metal geometry, inter-qudit distance, and second-shell softness.
+\item Use crystal-field models, CASSCF-type methods, or related lanthanide electronic-structure tools to project structural distortions into changes in spin parameters.
+\item Couple the molecular model to a continuum or Poisson-Nernst-Planck electrostatic model for the ionic control volumes.
+\item Reduce the resulting model into effective control coefficients $\alpha_i,\beta_i,\eta_{ij},\zeta_{ij}$ for gate simulation.
+\end{enumerate}
+
+The objective is to avoid optimizing a huge chemical space blindly. Screening only the most displacement-sensitive residues remains excellent engineering.
+
+\section{Stage 3: gene construction and expression}
+For anything beyond a single short peptide, recombinant expression becomes attractive. The 2017 study used GST-fusion expression and anti-GST confirmation for \dalbt{}-type constructs. We also recommend considering some of the newer high-throughput cell-free methods of expression. A mature implementation program should preserve that logic but tighten the workflow:
+
+\begin{enumerate}[leftmargin=2em]
+\item codon-optimize each construct for the chosen host;
+\item embed unique linker cassettes to maintain PCR addressability of each repeated unit;
+\item include protease-cleavage sites so the fusion partner can be removed cleanly, or design \emph{de novo} proteases for the specific sites that should be cleaved with RFdiffusion3. 
+\item reserve orthogonal affinity tags for scaffold assembly versus purification;
+\item archive sequence variants in a machine-readable design database with per-variant simulation metadata.
+\end{enumerate}
+
+This last point is mundane but critical. Once the platform becomes a library rather than a single molecule, experimental memory will fail unless the design loop is computationally organized.
+
+\section{Stage 4: first-pass spectroscopy}
+The idea of using a quick EPR screen at elevated temperature remains valuable. A sensible sequence is:
+
+\begin{enumerate}[leftmargin=2em]
+\item UV-visible and photoluminescence to verify peptide purity and lanthanide coordination;
+\item CW EPR to identify viable spin-active species;
+\item spin echo presence/absence screening at a relatively accessible temperature;
+\item temperature-ramp pulsed EPR on shortlisted candidates to measure how far ThermoGFN-IF-style rigidification actually shifts the useful operating window;
+\item only then full pulsed EPR, $T_1$, $T_2$, and Rabi measurements on shortlisted candidates.
+\end{enumerate}
+
+This reduces experimental cost per variant and keeps the search loop compatible with moderate-throughput peptide libraries.
+
+\section{Stage 5: surface and junction fabrication}
+Gold-thiol chemistry makes gold the natural first substrate. The junction program can be layered on top:
+
+\begin{enumerate}[leftmargin=2em]
+\item start with \au{} or similarly tractable noble-metal electrodes;
+\item form a sparse or moderate-density monolayer of qubit-bearing constructs;
+\item deposit a thin dielectric, polymer, or hydrogel separation layer;
+\item open or fabricate a nanopore or nanochannel connecting two electrolyte reservoirs;
+\item integrate side gates or local electrodes to tune the electrostatic boundary condition independently of the ionic gradient.
+\end{enumerate}
+
+This yields a hybrid electrochemical/spintronic chip rather than a free-floating biochemical assembly. That is desirable because it makes microscopy, resonator coupling, and reproducible measurement easier.
+
+\section{Stage 6: cryogenic and microwave infrastructure}
+At least for the lanthanide-peptide qubit core demonstrated so far, the device should initially be treated as a cryogenic platform. The practical infrastructure includes:
+
+\begin{enumerate}[leftmargin=2em]
+\item a cryostat capable of a few kelvin operation;
+\item microwave lines for pulsed EPR or resonator coupling;
+\item low-noise DC and AC bias lines for the transport junction;
+\item ionic reservoir control with minimized vibration and electromagnetic pickup;
+\item possibly a superconducting coplanar resonator if ensemble or chip-level coupling is desired.
+\end{enumerate}
+
+This is the point where the architecture stops looking like conventional wet biochemistry and starts looking like hybrid quantum hardware. That hybrid character is a feature, not a defect.
+
+\section{Representative design table}
+\begin{table}[ht]
+\centering
+\caption{Proposed first-generation implementation stack.}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{4.1cm} X}
+\toprule
+Layer & Candidate implementation & Engineering purpose \\
+\midrule
+Qubit core & GdLBT, NdLBT, or asymmetric double-\lbt{} derivatives & Preserve source-grounded coherence physics while enabling distinguishable sites. \\
+Scaffold & Surface-bound peptide, rigid protein fusion, or short repeat protein & Fix relative geometry and enable reproducible distance/orientation. \\
+Actuator & Charged peptide hairpin, pH-sensitive secondary shell, electroactive polymer linker & Convert ionic state into field or conformational perturbation without disturbing first-shell coordination. \\
+Junction & Nanopore, membrane protein, or synthetic nanochannel between two reservoirs & Implement a gated electrochemical communication channel between control volumes. \\
+Readout & Pulsed EPR, transport through nearby peptide path, resonator coupling & Access coherence, coupling, and possibly spin-dependent transport. \\
+Control software & Piecewise-constant electrochemical plus microwave trajectories & Compile ion-density trajectories into calibrated control schedules. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Detailed Experimental Program}
+
+\section{Phase I: reproduce the peptide-qubit baseline}
+No serious extension should begin from unverified lore. The first phase is strict reproduction of the peptide-qubit baseline. That means preparing the canonical \lbt{} peptide, coordinating candidate lanthanides, and verifying at least the qualitative hierarchy reported in the 2017 study:
+
+\begin{enumerate}[leftmargin=2em]
+\item photoluminescence signatures of coordination for Tb-based checks;
+\item usable pulsed-EPR signals for GdLBT and NdLBT;
+\item microsecond-scale $T_1$ and $T_2$;
+\item visible Rabi oscillations under optimized conditions.
+\end{enumerate}
+
+Only after this baseline exists should one introduce actuators or junction layers. Otherwise, a failed extended experiment will be impossible to diagnose.
+
+\section{Phase II: establish actuator-only perturbation}
+The next phase is not yet entanglement. It is actuator calibration. Introduce a secondary-shell or linker-based ionic actuator and ask a narrow question:
+\begin{quote}
+Can an ionic state change measurably shift a spectroscopic property of the qubit without degrading coherence catastrophically?
+\end{quote}
+
+Good first observables include:
+
+\begin{enumerate}[leftmargin=2em]
+\item resonance frequency shifts;
+\item changes in Rabi frequency calibration;
+\item changes in relaxation rates;
+\item modest, reversible changes in dipolar splitting between two nearby centers.
+\end{enumerate}
+
+Success here would already validate the core compartmental-control hypothesis.
+
+\section{Phase III: demonstrate tunable inter-qubit coupling}
+The target experiment for a two-qubit module is not immediately a full algorithm. It is a controlled change in the effective two-spin coupling when the ionic junction state is altered. If one can prepare two distinguishable centers, calibrate the pair \ham{}, then show reproducible changes in the conditional evolution under different junction states, the architecture becomes far more than a metaphor.
+
+This phase should be designed around differential measurements:
+
+\begin{enumerate}[leftmargin=2em]
+\item junction closed versus open;
+\item low-gradient versus high-gradient reservoir states;
+\item actuator present versus actuator-disabled mutant;
+\item same ionic state but different microwave phase program as a control.
+\end{enumerate}
+
+Without differential controls, any observed shift could be blamed on generic salt noise or sample drift.
+
+\section{Phase IV: demonstrate an entangling primitive}
+Only after Phase III should one attempt a gate-level primitive. The most accessible first target is not a deep circuit but a conditional-phase accumulation measurement or an iSWAP-like exchange signature in a strongly characterized two-site module.
+
+The experiment should seek:
+
+\begin{enumerate}[leftmargin=2em]
+\item a calibrated pairwise \ham{} under at least two actuator states;
+\item a pulse schedule that integrates the conditional interaction for a known gate area;
+\item state-preparation and tomography proxies appropriate to the measurement platform;
+\item randomized or interleaved benchmarking if the measurement bandwidth permits it.
+\end{enumerate}
+
+Even a low-fidelity entangling signature would be a meaningful milestone because it would validate the combined chemical, ionic, and microwave control concept.
+
+\section{Phase V: move from dimers to patterned arrays}
+Once a tunable dimer exists, the nonanuclear design vision becomes relevant again. The right order of operations is:
+
+\begin{enumerate}[leftmargin=2em]
+\item dimer with fixed geometry;
+\item dimer with tunable ionic actuator;
+\item three-site chain or star geometry;
+\item sparse array on surface or resonator;
+\item only then longer repeated architectures.
+\end{enumerate}
+
+The temptation to jump directly to long peptide chains should be resisted. In quantum hardware, scaling before understanding often destroys both.
+
+\section{Phase VI: toward engineered human cells}
+The phrase ``in human cells'' should be treated as a staged engineering objective, not as permission to skip the ex vivo device program. A rigorous progression is:
+
+\begin{enumerate}[leftmargin=2em]
+\item first validate the scaffolded qudit modules on rigid ex vivo substrates where spectroscopy and electrochemical control are cleanest;
+\item then test membrane association, trafficking, and complex integrity in cell-derived vesicles, giant plasma-membrane vesicles, or permeabilized-cell preparations;
+\item only after those steps introduce engineered human cell lines whose ion gradients, membrane potentials, and gap-junction connectivity can be controlled reproducibly.
+\end{enumerate}
+
+At the cell stage, the first questions should be biochemical and architectural rather than triumphalist. Does the scaffolded module assemble correctly? Does the designed ion pocket remain occupied? Does the gap-junction or synthetic-connector layer localize where intended? Do ThermoGFN-IF-style variants preserve structure and affinity under physiological crowding better than the unoptimized baseline? 
+
+\section{Phase VII: metrics for success}
+Because the project is interdisciplinary, it needs unambiguous metrics. The following are sensible stage gates:
+
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Chemical integrity:} lanthanide coordination, purity, and reproducible folding of the construct.
+\item \textbf{Coherence retention:} the actuator layer does not degrade $T_2$ by more than an agreed budget in the ``off'' state.
+\item \textbf{Control gain:} an ionic state change produces a measurable shift in qubit frequency or inter-qubit coupling.
+\item \textbf{Reversibility:} the same control trajectory can be cycled without irreversible loss of function.
+\item \textbf{Circuit relevance:} the induced coupling shift is large enough, relative to decoherence, to support a gate primitive rather than a barely visible spectroscopic effect.
+\end{enumerate}
+
+\chapter{Quantum-Circuit Interpretation of Ion-Gated Control}
+
+\section{From molecular graph to logical graph}
+Every scaffolded multi-qubit molecule defines a graph. Nodes are spin centers; edges are effective couplings. In a fixed molecular architecture, the graph is mostly static. The architecture considered here is more interesting: an edge can be dynamically weighted by the ionic state of a nearby junction. The effective adjacency matrix becomes time dependent:
+\[
+A_{ij}(t) \sim J_{ij}(t).
+\]
+That means the compiler should not treat connectivity as binary. It should treat it as analogue and time structured. In the revised architecture, it should also treat many nodes as \emph{qudits} or small encoded qubit blocks rather than as bare two-level systems.
+
+\section{The ``frame'' idea as a compiled schedule}
+Suppose the device supports a set of actuator frames
+\[
+F_k = \left(c_k, V_k, pH_k, B_{1,k}, \phi_k, \Delta t_k\right).
+\]
+Then a circuit is implemented as a schedule of frames:
+
+\begin{verbatim}
+prepare state
+apply single-qubit calibration pulse
+set electrochemical frame F1
+wait Delta t1
+apply refocusing pulse
+set electrochemical frame F2
+wait Delta t2
+read out spin echo / transport / resonator response
+\end{verbatim}
+
+The high-level compiler's job is to choose $\{F_k\}$ such that the resulting integrated pair \ham{} produces the target gate while keeping decoherence acceptable.
+
+\section{Generalized qudit primitives}
+Once a protein-ion complex retains more than two spectrally isolated levels, the natural local object is a $d$-level qudit. Let $\{|k\rangle\}_{k=0}^{d-1}$ be its computational basis and define the usual shift and clock operators
+\begin{equation}
+\Xd |k\rangle = |k+1 \!\!\!\pmod d\rangle,
+\qquad
+\Zd |k\rangle = \omega^k |k\rangle,
+\qquad
+\omega = e^{2\pi i/d}.
+\end{equation}
+They obey the Weyl commutation relation
+\begin{equation}
+\Zd \Xd = \omega \, \Xd \Zd.
+\end{equation}
+For a protein-ion qudit, the effective local Hamiltonian can be expanded in this operator basis:
+\begin{equation}
+H_i^{(d)} = \sum_{a,b=0}^{d-1} h_{ab}^{(i)} \, \Xd^{\,a}\Zd^{\,b},
+\qquad
+H_{ij}^{(d)} = \sum_{a,b,c,e=0}^{d-1}
+J_{abce}^{(ij)} \, X_{i,d}^{\,a} Z_{i,d}^{\,b}\otimes X_{j,d}^{\,c} Z_{j,d}^{\,e}.
+\end{equation}
+This is not a decorative rewrite. It is the right language for local modules whose chemistry naturally yields qutrit- or ququart-like manifolds before an encoded logical qubit is chosen.
+
+\begin{proposition}[Weyl operators provide a control-complete local basis]
+For a $d$-dimensional protein-ion complex, the set
+\[
+\left\{\Xd^{\,a}\Zd^{\,b}\right\}_{a,b=0}^{d-1}
+\]
+forms an orthogonal basis of the $d\times d$ operator space under the Hilbert-Schmidt inner product. Consequently, any effective single-site Hamiltonian can be expanded in this basis, and any control scheme that can independently modulate at least two noncommuting local directions together with one entangling edge direction is generically rich enough to generate a dense reachable set on the encoded subspace.
+\end{proposition}
+
+\begin{proof}
+The orthogonality statement is standard:
+\[
+\Tr\!\left[(\Xd^{\,a}\Zd^{\,b})^\dagger \Xd^{\,a'}\Zd^{\,b'}\right]
+=
+d\,\delta_{a,a'}\delta_{b,b'}.
+\]
+Hence the Weyl operators span the full operator algebra. If control modulates two noncommuting local generators and one nontrivial inter-site generator, then the dynamical Lie algebra generated by repeated commutators is generically nonabelian and dense in the encoded unitary group unless protected symmetries force a smaller closure.
+\end{proof}
+
+This proposition is the control-theoretic justification for using shift and clock operators in the present architecture. Electrochemical frame switching does not need to reproduce arbitrary Hamiltonians directly. It only needs to move the coefficients of a noncommuting set of Weyl components in a calibrated way. Combined with local microwave driving, that already supplies a versatile compilation alphabet.
+
+\section{A didactic two-qubit example}
+Consider two distinguishable qubits with effective \ham{}
+\[
+H = \frac{\omega_1}{2}\sigma_z^{(1)} + \frac{\omega_2}{2}\sigma_z^{(2)}
++ J_{ZZ}(t)\sigma_z^{(1)}\sigma_z^{(2)}.
+\]
+If the actuator can switch $J_{ZZ}$ between a weak ``idle'' value and a stronger ``active'' value, then a controlled-phase gate is implemented by spending a time
+\[
+\tau_{\mathrm{gate}} \approx \frac{\pi}{4\left(J_{ZZ}^{\mathrm{on}}-J_{ZZ}^{\mathrm{idle}}\right)}
+\]
+in the active frame, with appropriate compensation for single-qubit phases. The molecular challenge is therefore not mysterious: one needs enough actuator leverage to change $J_{ZZ}$ by an amount large compared to $1/T_2$.
+
+\section{Exchange-based gate variant}
+If the actuator instead enhances a transverse exchange term,
+\[
+H_{XY}(t) = J_{XY}(t)\left(\sigma_x^{(1)}\sigma_x^{(2)}+\sigma_y^{(1)}\sigma_y^{(2)}\right),
+\]
+then an iSWAP-like gate is possible. This variant may be attractive if the actuator modulates overlap or superexchange more strongly than it modulates Ising-like terms. Chemically, that suggests using a bridge whose orbital participation changes under electrostatic actuation.
+
+\section{A high-level Cirq sketch}
+The control layer can be expressed programmatically even before a full low-level pulse compiler exists. Cirq already supports generalized $d$-dimensional qids, which makes it a natural notation for early architecture work:
+
+\begin{lstlisting}[style=cirqstyle,caption={High-level Cirq sketch for a local qutrit module whose entangling block corresponds to a calibrated electrochemical frame.}]
+import cirq
+import numpy as np
+
+d = 3
+omega = np.exp(2j * np.pi / d)
+q0 = cirq.LineQid(0, dimension=d)
+q1 = cirq.LineQid(1, dimension=d)
+
+X = np.roll(np.eye(d), 1, axis=1)
+Z = np.diag([omega ** k for k in range(d)])
+
+def controlled_phase(theta):
+    phases = [np.exp(1j * theta * (a * b)) for a in range(d) for b in range(d)]
+    return np.diag(phases)
+
+mw_pulse = cirq.MatrixGate(X, qid_shape=(d,))
+phase_comp = cirq.MatrixGate(Z, qid_shape=(d,))
+frame_gate = cirq.MatrixGate(controlled_phase(np.pi / 3), qid_shape=(d, d))
+
+circuit = cirq.Circuit(
+    mw_pulse.on(q0),
+    frame_gate.on(q0, q1),
+    phase_comp.on(q1),
+)
+
+print(circuit)
+\end{lstlisting}
+
+In a real experiment, the matrix-valued ``frame gate'' would not be inserted by hand. It would be synthesized from the fitted effective Hamiltonian of a measured electrochemical frame $F_k$. But the Cirq sketch is still useful because it clarifies how local microwave pulses, electrochemical frames, and logical entangling blocks fit into one compiler-level abstraction.
+
+\section{Noise budgeting in circuit language}
+The molecular system should be evaluated with the same discipline applied to more conventional qubit platforms. A gate succeeds only if
+\[
+\frac{\Delta J_{\mathrm{control}}}{\Gamma_\phi} \gg 1
+\]
+and ideally
+\[
+\tau_{\mathrm{gate}} \ll T_2^{\mathrm{eff}}.
+\]
+Here $\Delta J_{\mathrm{control}}$ is the actuator-induced change in coupling, and $T_2^{\mathrm{eff}}$ is the coherence time under the actual control waveform, not under a quiet reference condition. This is where many otherwise attractive molecular proposals fail. They can change something, but not enough, or not cleanly enough, to matter on gate timescales.
+
+\section{Compiler model for larger arrays}
+If the nonanuclear design philosophy is revisited, the right abstraction is a weighted, imperfect, partially programmable graph. The compiler would need to:
+
+\begin{enumerate}[leftmargin=2em]
+\item identify the currently calibrated qubit frequencies and coupling map;
+\item assign logical qubits to physical nodes;
+\item choose electrochemical frames that transiently activate only the needed edge set;
+\item interleave microwave refocusing to cancel spectator interactions;
+\item update the calibration model from measured drifts.
+\end{enumerate}
+
+This is not qualitatively different from compiling on analogue neutral-atom or tunable-coupler superconducting devices. The difference is that the physical control knobs are chemical and electrochemical rather than purely electronic.
+
+\chapter{Hierarchical Cellular Architecture, Ion Dynamics, and Topological Encoding}
+
+\section{Hierarchy from single complexes to intercellular graphs}
+The architecture is easiest to reason about as a three-level hierarchy.
+
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Level 0: single protein-ion complexes.} Each complex is treated as a qudit whose relevant degrees of freedom are given by a spectrally isolated subset of spin states.
+\item \textbf{Level 1: scaffolded intracellular subnetworks.} RFdiffusion3-generated local modules combine several complexes into a mechanically coherent block that can encode a logical qubit or low-overhead logical qudit.
+\item \textbf{Level 2: intercellular connectivity.} Cells or cell-like compartments host these local modules and are linked by gap junctions, synthetic pores, or other engineered conduits that provide slower, weaker, but still programmable couplings between modules.
+\end{enumerate}
+
+This hierarchy is not only a narrative convenience. It is the mechanism by which the architecture reduces its dependence on long-range transport. Local logical structure is created at Level 1 by protein design and strong intra-scaffold couplings. Intercellular links at Level 2 are then reserved for routing, synchronization, syndrome extraction, and topological stitching.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Latex, node distance=0.8cm and 1.0cm, scale=0.92, every node/.style={transform shape}]
+  \node[draw, rounded corners=3pt, fill=green!10, minimum width=3.0cm, minimum height=1.0cm, align=center] (l0a) {protein-ion complex\\qudit};
+  \node[draw, rounded corners=3pt, fill=green!10, minimum width=3.0cm, minimum height=1.0cm, right=of l0a, align=center] (l0b) {protein-ion complex\\qudit};
+  \node[draw, rounded corners=3pt, fill=green!10, minimum width=3.0cm, minimum height=1.0cm, right=of l0b, align=center] (l0c) {protein-ion complex\\qudit};
+
+  \node[draw, rounded corners=4pt, fill=blue!8, fit=(l0a)(l0b)(l0c), inner sep=0.35cm, label=above:{\small Level 1: RFdiffusion3-scaffolded local logical module}] (block) {};
+  \draw[very thick, orange!70!black] (l0a) -- (l0b);
+  \draw[very thick, orange!70!black] (l0b) -- (l0c);
+
+  \node[draw, circle, fill=red!8, minimum size=1.2cm, below left=1.8cm and 0.6cm of block, align=center] (cell1) {cell\\A};
+  \node[draw, circle, fill=red!8, minimum size=1.2cm, below=1.8cm of block, align=center] (cell2) {cell\\B};
+  \node[draw, circle, fill=red!8, minimum size=1.2cm, below right=1.8cm and 0.6cm of block, align=center] (cell3) {cell\\C};
+
+  \draw[->, thick] (block.south west) -- (cell1.north);
+  \draw[->, thick] (block.south) -- (cell2.north);
+  \draw[->, thick] (block.south east) -- (cell3.north);
+  \draw[very thick, dashed, purple!70!black] (cell1) -- node[above, sloped] {\small gap junction / synthetic connector} (cell2);
+  \draw[very thick, dashed, purple!70!black] (cell2) -- node[above, sloped] {\small gap junction / synthetic connector} (cell3);
+
+  \node[draw, rounded corners=3pt, fill=yellow!12, minimum width=5.7cm, minimum height=0.95cm, below=of cell2, align=center] (surf) {minimal-genus embedding / surface-code or hyberbolic-code layer};
+  \draw[->, thick] (cell1.south) -- (surf.north west);
+  \draw[->, thick] (cell2.south) -- (surf.north);
+  \draw[->, thick] (cell3.south) -- (surf.north east);
+\end{tikzpicture}
+\caption{Hierarchy of the revised architecture. Single protein-ion complexes become scaffolded local modules, and those modules then participate in a slower intercellular graph whose topology can be compiled into a surface-code-like or hyperbolic encoding layer.}
+\end{figure}
+
+\section{Abundance, edge-count, and capacity estimates}
+A serious architecture implementation should say not only what the hierarchy is, but how many objects each level can plausibly contain. The right first model is a membrane-proximal counting model. Let $A_m$ be cell membrane area, let $h_{\mathrm{shell}}$ be the thickness of the membrane-adjacent shell in which the active protein-ion complexes live, let $c_q$ be the concentration of correctly assembled complexes in that shell, and let $\eta_{\mathrm{act}}$ be the fraction that are simultaneously metal-loaded, folded, attached to the intended scaffold geometry, and spectroscopically usable. Then the expected active Level-0 qudit count per cell is
+\begin{equation}
+N_0 \approx \eta_{\mathrm{act}} N_A c_q A_m h_{\mathrm{shell}},
+\label{eq:N0-shell}
+\end{equation}
+where $N_A$ is Avogadro's number. For a representative engineered mammalian cell with radius in the $10$--$15~\mu\mathrm{m}$ range, $A_m$ lies on the order of $10^3~\mu\mathrm{m}^2$. Taking
+\[
+A_m = 1.5\times 10^3~\mu\mathrm{m}^2,
+\qquad
+h_{\mathrm{shell}} = 50~\mathrm{nm},
+\]
+gives a membrane-proximal shell volume of approximately $75~\mathrm{fL}$. Equation~\eqref{eq:N0-shell} then converts concentration directly into a physical-qudit budget.
+
+Let $y_{\mathrm{asm}}$ denote the fraction of active Level-0 qudits that survive Level-1 module assembly and let each dense local module contain $m_\alpha \in [m_{\min},m_{\max}]$ physical qudits.
+
+\begin{proposition}[Hierarchy-size and edge-count bounds]
+\label{prop:hierarchy-bounds}
+Consider $C$ cells. In cell $p$, let $N_{0,p}$ active Level-0 qudits be partitioned into $M_p$ successful Level-1 modules with module sizes $m_{p,\alpha}\in[m_{\min},m_{\max}]$ and assembly yield $y_{\mathrm{asm},p}\in(0,1]$. Let the sparse intra-cell logical graph on those $M_p$ modules have average degree $\delta^{\mathrm{intra}}_p$, and let the intercellular graph have average cell degree $\delta^{\mathrm{inter}}$. Then
+\begin{align}
+\frac{y_{\mathrm{asm},p}N_{0,p}}{m_{\max}}
+&\le
+M_p
+\le
+\frac{y_{\mathrm{asm},p}N_{0,p}}{m_{\min}},\\[3pt]
+M_p(m_{\min}-1)
+&\le
+E^{(p)}_{\mathrm{dense}}
+\le
+M_p\frac{m_{\max}(m_{\max}-1)}{2},\\[3pt]
+\frac{M_p\delta^{\mathrm{intra}}_p}{2}
+&=
+E^{(p)}_{\mathrm{intra}},\\[3pt]
+\frac{C\delta^{\mathrm{inter}}}{2}
+&=
+E_{\mathrm{inter}}.
+\end{align}
+\end{proposition}
+
+\begin{proof}
+Each successful Level-1 module consumes between $m_{\min}$ and $m_{\max}$ active Level-0 qudits, so the module-count bounds follow immediately. A connected module on $m$ qudits needs at least $m-1$ dense edges, while a complete module uses at most $m(m-1)/2$. The sparse-edge equalities are the handshaking lemma applied to the intra-cell logical graph and the intercellular cell graph.
+\end{proof}
+
+Proposition~\ref{prop:hierarchy-bounds} already captures the desired dense-to-sparse transition. Within a module, edge density is $\Theta(1)$. Across modules within a cell, if $\delta^{\mathrm{intra}}_p$ stays $O(1)$, the graph density scales as $O(M_p^{-1})$. Across cells, if $\delta^{\mathrm{inter}}$ stays $O(1)$, the intercellular graph density scales as $O(C^{-1})$. In other words, dense local logical structure and sparse higher-level routing are not merely aesthetic choices; they are the asymptotically natural setting.
+
+For encoded capacity, it is useful to introduce one more coarse number. If one surface-code-like or hyperbolic patch of code distance $D$ consumes approximately $\kappa_{\mathrm{code}}D^2$ Level-1 modules per robust logical qudit, then
+\begin{equation}
+N_{\mathrm{robust}}
+\approx
+\frac{\sum_{p=1}^{C} M_p}{\kappa_{\mathrm{code}}D^2},
+\qquad
+\kappa_{\mathrm{code}}\in[2,4].
+\label{eq:Nrobust}
+\end{equation}
+For the representative estimates below, $\kappa_{\mathrm{code}}=3$ is a reasonable middle-ground assumption. Likewise, if a fraction $\chi_{\mathrm{loc}}$ of Level-1 modules can participate in parallel local gates with characteristic duration $\tau_{\mathrm{loc}}$, and a fraction $\chi_{\mathrm{route}}$ of intercellular links can be refreshed in parallel with characteristic frame-update time $\tau_{\mathrm{route}}$, then the computational-throughput envelope is
+\begin{equation}
+R_{\mathrm{loc}}
+\approx
+\frac{\chi_{\mathrm{loc}}\sum_p M_p}{\tau_{\mathrm{loc}}},
+\qquad
+R_{\mathrm{route}}
+\approx
+\frac{\chi_{\mathrm{route}}E_{\mathrm{inter}}}{\tau_{\mathrm{route}}}.
+\label{eq:Rloc-Rroute}
+\end{equation}
+These are operation-rate estimates, not electrical power-dissipation estimates.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Representative per-cell abundance and connectivity envelopes for the membrane-proximal hierarchy model. Here $A_m=1.5\times10^3~\mu\mathrm{m}^2$, $h_{\mathrm{shell}}=50~\mathrm{nm}$, and the module yield assumptions are $y_{\mathrm{asm}}=0.50$, $0.65$, and $0.75$ for the three settings.}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\centering\arraybackslash}p{1.3cm} >{\centering\arraybackslash}p{1.4cm} >{\centering\arraybackslash}p{1.5cm} >{\centering\arraybackslash}p{1.0cm} >{\centering\arraybackslash}p{1.5cm} X}
+\toprule
+Setting & $c_q$ & $\eta_{\mathrm{act}}$ & $N_0$ / cell & $m$ & $M_1$ / cell & Edge budget per cell \\
+\midrule
+Demonstrator & $50~\mathrm{nM}$ & $0.15$ & $3.4\times10^2$ & $6$ & $2.8\times10^1$ & $E_{\mathrm{dense}}\in[1.4,4.2]\times10^2$, $E_{\mathrm{intra}}\approx 2.8\times10^1$, outgoing $E_{\mathrm{inter}}\approx 2$ \\
+Robust single-cell setting & $200~\mathrm{nM}$ & $0.25$ & $2.3\times10^3$ & $6$ & $2.4\times10^2$ & $E_{\mathrm{dense}}\in[1.2,3.7]\times10^3$, $E_{\mathrm{intra}}\approx 3.7\times10^2$, outgoing $E_{\mathrm{inter}}\approx 4$ \\
+Upper-envelope engineered cell & $500~\mathrm{nM}$ & $0.35$ & $7.9\times10^3$ & $8$ & $7.4\times10^2$ & $E_{\mathrm{dense}}\in[5.2,20.7]\times10^3$, $E_{\mathrm{intra}}\approx 1.5\times10^3$, outgoing $E_{\mathrm{inter}}\approx 6$ \\
+\bottomrule
+\end{tabularx}
+\label{tab:hierarchy-resource}
+\end{table}
+
+Two lessons from Table~\ref{tab:hierarchy-resource} matter immediately. First, the hierarchy compresses abundance strongly from Level 0 to Level 1: one should expect $10^2$--$10^4$ physical qudits per engineered cell to collapse into roughly $10^1$--$10^3$ local logical modules, not to remain as a flat pool of independent degrees of freedom. Second, the intended sparsity is dramatic. In the robust setting, a complete graph on $M_1\approx 2.4\times 10^2$ local modules would contain nearly $3\times10^4$ logical edges, whereas the proposed sparse architecture uses only about $3.7\times10^2$ intra-cell edges and only a few intercellular ones per cell.
+
+\begin{table}[ht]
+\centering
+\scriptsize
+\caption{Representative per-cell capacity and throughput envelopes. The raw state-space estimate assumes physical qutrits ($d=3$), the Level-1 encoded estimate assumes one exported logical qubit per local module ($d_L=2$), and the throughput envelope uses $\chi_{\mathrm{loc}}=0.25$, $\chi_{\mathrm{route}}=0.5$, $\tau_{\mathrm{loc}}=1~\mu\mathrm{s}$, and $\tau_{\mathrm{route}}=1~\mathrm{ms}$. The robust logical counts use a $100$-cell sheet and $\kappa_{\mathrm{code}}=3$ in Eq.~\eqref{eq:Nrobust}.}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\centering\arraybackslash}p{1.6cm} >{\centering\arraybackslash}p{1.6cm} >{\centering\arraybackslash}p{1.8cm} >{\centering\arraybackslash}p{1.8cm} X}
+\toprule
+setting & $\log_{10}\dim\mathcal{H}_{\mathrm{raw}}$ & $\log_{10}\dim\mathcal{H}_{L1}$ & $R_{\mathrm{loc}}$ / cell & $R_{\mathrm{route}}$ / cell & Robust logical count in a $100$-cell sheet \\
+\midrule
+Demonstrator & $1.6\times10^2$ & $8.5$ & $7.1\times10^6~\mathrm{s}^{-1}$ & $1.0\times10^3~\mathrm{s}^{-1}$ & $D=5:\ 3.8\times10^1,\quad D=7:\ 1.9\times10^1$ \\
+Robust single-cell setting & $1.1\times10^3$ & $7.4\times10^1$ & $6.1\times10^7~\mathrm{s}^{-1}$ & $2.0\times10^3~\mathrm{s}^{-1}$ & $D=5:\ 3.3\times10^2,\quad D=7:\ 1.7\times10^2$ \\
+Upper-envelope engineered cell & $3.8\times10^3$ & $2.2\times10^2$ & $1.9\times10^8~\mathrm{s}^{-1}$ & $3.0\times10^3~\mathrm{s}^{-1}$ & $D=5:\ 9.9\times10^2,\quad D=7:\ 5.0\times10^2$ \\
+\bottomrule
+\end{tabularx}
+\label{tab:capacity-envelope}
+\end{table}
+
+Table~\ref{tab:capacity-envelope} should be read carefully. The enormous raw Hilbert-space dimension is not the same thing as useful fault-tolerant compute. The more meaningful numbers are the Level-1 encoded capacity, the robust logical count after the $\kappa_{\mathrm{code}}D^2$ overhead is paid, and the split between fast local compute power and much slower intercellular routing power. The architecture is deliberately anisotropic: most compute should happen inside dense local modules at microsecond or sub-microsecond scales, while cell-to-cell routing and synchronization remain millisecond-class or slower.
+
+Resource estimation also has to include calibration burden. If one stores $\alpha_{\mathrm{site}}$ fitted parameters per active qudit, $\alpha_{\mathrm{dense}}$ per dense local edge, and $\alpha_{\mathrm{sparse}}$ per sparse upper-layer edge, then a representative per-cell calibration budget is
+\begin{equation}
+P_{\mathrm{cal}}
+\approx
+\alpha_{\mathrm{site}}N_0
+\;+\;
+\alpha_{\mathrm{dense}}E_{\mathrm{dense}}^{\mathrm{mid}}
+\;+\;
+\alpha_{\mathrm{sparse}}\!\left(E_{\mathrm{intra}}+E_{\mathrm{inter}}\right),
+\label{eq:Pcal}
+\end{equation}
+where $E_{\mathrm{dense}}^{\mathrm{mid}}$ is a midpoint estimate between the connected and near-clique dense-edge bounds. With the modest choices $\alpha_{\mathrm{site}}=5$, $\alpha_{\mathrm{dense}}=4$, and $\alpha_{\mathrm{sparse}}=3$, the three settings above require on the order of $3\times10^3$, $2\times10^4$, and $10^5$ fitted parameters per cell, respectively. That is a large experimental burden, but it is a tractable classical-computing burden because the vast majority of those parameters live inside independent local modules.
+
+The computational-complexity picture is therefore bifurcated. A naive microscopic simulation of one dense module with local dimension $d$ and module size $m$ scales exponentially, on the order of $O(d^{3m})$ for brute-force dense linear algebra, which is precisely why $m$ should remain in the single digits. By contrast, once those modules are reduced to fitted effective qudits and weighted couplers, calibration storage is linear in node-plus-edge count,
+\[
+O\!\left(\sum_p N_{0,p} + \sum_p E^{(p)}_{\mathrm{dense}} + \sum_p E^{(p)}_{\mathrm{intra}} + E_{\mathrm{inter}}\right),
+\]
+while sparse routing and schedule updates are near-linear, for example $O(E\log V)$ on the upper-level graph. In short, the hard complexity lives in local chemistry and local Hamiltonian identification, not in global graph compilation.
+
+\section{Ion gradients, membrane dynamics, and timescale separation}
+In a cellular or membrane-adjacent setting, the relevant control variables are not only static concentrations but dynamical ionic fields. A minimal continuum description for ionic species $a$ uses the Nernst-Planck flux
+\begin{equation}
+\mathbf{J}_a = -D_a \nabla c_a - \mu_a z_a F c_a \nabla \phi,
+\end{equation}
+with concentration dynamics
+\begin{equation}
+\partial_t c_a = -\nabla \cdot \mathbf{J}_a + R_a,
+\end{equation}
+where $D_a$ is the diffusivity, $\mu_a$ the mobility, $z_a$ the valence, $\phi$ the electric potential, and $R_a$ any buffering, pumping, or reaction term. At the membrane scale, one can write a coarse membrane-potential equation
+\begin{equation}
+C_m \frac{dV_m}{dt}
+=
+-\sum_a I_a^{\mathrm{mem}}
+-\sum_{q \in \mathcal{N}(p)} I_{pq}^{\mathrm{gj}}
++I_p^{\mathrm{ext}},
+\end{equation}
+where $I_{pq}^{\mathrm{gj}}$ is the gap-junction current between cells $p$ and $q$.
+
+The key control point is timescale separation. Microwave rotations and local entangling dynamics occur on timescales far faster than cellular diffusion and gap-junction equilibration. That means ionic variables should generally be treated as slowly varying \emph{frames}: each electrochemical configuration defines a quasi-static effective Hamiltonian for a time window over which the qudit dynamics are fast and coherent relative to the frame drift. The practical compiler therefore alternates between
+
+\begin{enumerate}[leftmargin=2em]
+\item a slow layer that sets $c_a$, $V_m$, junction conductance, and local field bias, and
+\item a fast layer that executes microwave or resonator-mediated logical operations inside that electrochemical frame.
+\end{enumerate}
+
+This slow-fast split is crucial in human-cell discussions. Without it, the model would implicitly demand that biological ion transport itself execute every quantum gate at quantum speed, which is neither necessary nor plausible.
+
+\section{Gap junctions and de novo modulators}
+Gap junctions matter because they are the most natural biological analogue of a tunable intercellular coupler. In a mature cellular architecture, they would not carry full-fidelity quantum information directly. Their more realistic roles are to set membrane-potential correlations, coordinate local ionic frames across neighboring cells, and provide a programmable low-bandwidth channel that biases when intercellular edges are effectively active.
+
+This perspective suggests a specific protein-design opportunity. One need not redesign connexins wholesale at the start. Instead, one can design \emph{modulators} that alter clustering, open probability, partner specificity, or local electrostatic environment near a native or engineered pore. Existing connexin biology already shows two relevant footholds. First, direct connexin-binding peptides can shift opening thresholds; the classical Cx43 mimetic peptides Gap26 and Gap27 are an existence proof that direct binding to connexin-associated extracellular regions can suppress channel opening dynamics \cite{desplantez2012}. Second, Cx43 gating, plaque stability, and turnover are strongly shaped by direct binding partners and kinase-linked upstream machinery, especially ZO-1-associated accrual and phosphorylation-driven transitions between open, closed, and internalized channel states \cite{thevenin2017}. The novel step proposed here is to turn those biological facts into an explicit de novo control layer.
+
+RFdiffusion3 is relevant because it can scaffold proteins around fixed pore-adjacent motifs or extracellular-loop contact motifs, and ThermoGFN-IF-style refinement is relevant because these modulators will need high affinity, membrane-proximal stability, and tolerance to the ionic and crowding conditions of the cellular environment. Just as importantly, ThermoGFN-IF-style \emph{training objectives} can be constructed to favor not only affinity but also \emph{binding kinetics}. That makes it natural to seek modulators with designed on-rates and off-rates rather than merely high equilibrium occupancy.
+
+Three modulator classes are especially attractive:
+
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Direct-binding modulators.} De novo binders that contact connexin extracellular or cytoplasmic regulatory regions and bias the channel directly toward open, closed, or desensitized conformations.
+\item \textbf{Upstream-binding modulators.} De novo binders that recruit, block, or sequester upstream proteins involved in gating, phosphorylation, plaque stabilization, or internalization.
+\item \textbf{Bifunctional modulators.} Proteins with one arm for direct connexin engagement and a second arm for upstream-gating machinery, thereby coupling conformational bias with pathway-level control.
+\item \textbf{Clustering and selectivity modulators.} Accessory designs that change local plaque density or local ionic filtering near the junction so that the electrochemical signal is cleaner and more reproducible from the qudit's perspective.
+\end{enumerate}
+
+From the quantum-control side, the key new variable is binder occupancy. Let $b_{\mathrm{dir}}(t)$ and $b_{\mathrm{up}}(t)$ denote occupancies of a direct-binding modulator and an upstream-binding modulator. A minimal kinetic model is
+\begin{align}
+\dot{b}_{\mathrm{dir}} &= k_{\mathrm{on}}^{\mathrm{dir}} c_{\mathrm{dir}} \big(1-b_{\mathrm{dir}}\big) - k_{\mathrm{off}}^{\mathrm{dir}} b_{\mathrm{dir}},\\
+\dot{b}_{\mathrm{up}} &= k_{\mathrm{on}}^{\mathrm{up}} c_{\mathrm{up}} \big(1-b_{\mathrm{up}}\big) - k_{\mathrm{off}}^{\mathrm{up}} b_{\mathrm{up}}.
+\end{align}
+The effective junction conductance can then be modeled as
+\begin{equation}
+g_{pq}(t)
+=
+g_{pq}^{(0)}
++ \Delta g_{pq}^{\mathrm{dir}} b_{\mathrm{dir}}(t)
++ \Delta g_{pq}^{\mathrm{up}} b_{\mathrm{up}}(t)
++ \Delta g_{pq}^{\mathrm{coop}} b_{\mathrm{dir}}(t)b_{\mathrm{up}}(t),
+\end{equation}
+and the corresponding inter-module coupling is
+\begin{equation}
+J_{pq}^{\mathrm{eff}}(t) = J_{pq}^{(0)} + \chi_{pq} g_{pq}(t).
+\end{equation}
+This is the concrete sense in which de novo gap-junction modulators become part of the computational substrate: by tuning their binding kinetics, one tunes the time dependence of conductance, which tunes the time dependence of effective coupling.
+
+Again, rigor matters. This is a design proposal, not a claim that de novo gap-junction modulators have already been demonstrated for quantum engineering. But it is precisely the sort of constrained, motif-centered, affinity-sensitive, and now kinetics-aware protein design problem that RFdiffusion3 and ThermoGFN-IF make more tractable than it was even a few years ago.
+
+\section{Minimal-genus embeddings and topological code constructions}
+Once Level-1 modules and Level-2 intercellular couplers exist, the connectivity abstraction is a finite graph
+\[
+\Graph_H = (V_H,E_H),
+\]
+whose vertices are local logical modules and whose edges are calibrated couplers. The natural topological question is then: on what orientable surface can this graph be embedded with the least genus, and what code family becomes local on that embedding? In the background sit two mature mathematical ideas: orientable graph genus and surface-code-like stabilizer constructions on cellulations of surfaces \cite{graphembedding1987,kitaev2003,quditsurface2007}.
+
+\begin{theorem}[Minimal-genus embedding gives a local code skeleton]
+\label{thm:genus}
+Let $\Graph_H$ be a finite connected hierarchical connectivity graph. There exists an orientable surface $\Surface_{g_*}$ of minimal genus $g_*=\genusop(\Graph_H)$ on which $\Graph_H$ admits a cellular embedding. Passing to the medial cellulation of that embedding yields a local two-dimensional complex on $\Surface_{g_*}$. Placing one $d$-level logical qudit on each edge of the medial cellulation and defining $X_d$-type star checks and $Z_d$-type plaquette checks on the associated primal and dual cells produces a local qudit surface-code-like stabilizer family on $\Surface_{g_*}$.
+\end{theorem}
+
+\begin{proof}
+By definition of orientable genus, $\Graph_H$ admits a cellular embedding on an orientable surface of genus $g_*$. Any such cellular embedding determines a primal cell complex and hence a dual one. The medial construction is local: each edge of the embedded graph becomes a local qudit site adjacent only to the cells incident on that edge. Standard $d$-ary surface-code constructions assign commuting $X_d$-type checks to stars and $Z_d$-type checks to plaquettes because the primal and dual incidence relations intersect with opposite orientation exactly where required. Therefore the resulting stabilizer support is local on $\Surface_{g_*}$.
+\end{proof}
+
+Theorem~\ref{thm:genus} should be read as a compiler theorem rather than as a claim that cells literally lie on a visible torus. The physical tissue or culture can be irregular; what matters is that the calibrated connectivity graph defines a minimal-genus topological \emph{model} on which local checks can be laid down. This gives a principled route from a messy biological connectivity pattern to a mathematically controlled error-correction layer.
+
+\section{Punctures, defects, cusps, and hyperbolic variants}
+The minimal-genus surface is not always the end of the story. Missing cells, silent local modules, blocked junctions, or deliberately deactivated patches naturally create punctures and defects in the effective cellulation. These are not merely nuisances; they can serve as logical handles, defect boundaries, or routing detours. Likewise, when the calibrated intercellular graph has large girth and sparse high-degree structure, the induced surface can carry negative-curvature flavor and motivate hyperbolic code variants rather than Euclidean surface-code layouts.
+
+Operationally, the mapping is:
+
+\begin{enumerate}[leftmargin=2em]
+\item a \textbf{puncture} is a deliberately removed face or inactive local module used to encode or move logical information;
+\item a \textbf{defect} is a region where couplers or checks are intentionally altered to change code topology;
+\item a \textbf{cusp-like region} is an effectively narrowed or sparsified part of the graph where geometric locality persists but curvature becomes more negative than in a flat tiling.
+\end{enumerate}
+
+The architecture therefore has a natural topological vocabulary for imperfections. It does not require the connectivity graph to be a perfect square lattice. It only requires the compiler to know what graph it actually has.
+
+\section{Why this hierarchy is better than transport-first thinking}
+The temptation in ion-gated architectures is to imagine transport as the hero that creates computation. The architecture inverts that logic. Computation should be born locally in scaffolded, thermostable, strongly characterized modules. Ion gradients, gap junctions, and intercellular conduits should then serve as slower and weaker resources for synchronization, routing, defect motion, and topological stitching. That hierarchy is more robust, more experimentally decomposable, and far more compatible with rigorous error budgeting.
+
+\chapter{Molecular and Device Implementation Details}
+
+\section{Choosing the lanthanide and spin manifold}
+The 2017 study focused experimentally on GdLBT and NdLBT for coherence measurements, while also examining other lanthanides for magnetic characterization. A first-generation ion-gated implementation should not attempt to optimize every axis at once. The right strategy is to choose one family for control development and one family for device integration.
+
+Gd-based systems are attractive because they have relatively clean EPR accessibility and because the peptide-spin experiments already demonstrated the most robust coherence among the reported cases. Nd-based systems are attractive because their distinct crystal-field structure may offer different transition selectivity and potentially richer Stark sensitivity. Tb- and Dy-based systems are attractive from a spintronic or anisotropy perspective, especially where nuclear-spin structure or large magnetic anisotropy is beneficial, but they also increase control-model complexity.
+
+The practical rule is therefore:
+
+\begin{enumerate}[leftmargin=2em]
+\item use GdLBT-derived constructs for baseline actuation and calibration experiments;
+\item use one deliberately non-equivalent partner center, perhaps Nd-like or a chemically perturbed Gd site, for two-site selective-addressing studies;
+\item defer more exotic anisotropic lanthanides until the actuation concept itself has been validated.
+\end{enumerate}
+
+This may sound conservative, but it is good engineering. The device concept already introduces electrochemistry, surfaces, and control software. The spin species should initially be as experimentally forgiving as possible.
+
+\section{Designing the actuator layer}
+The actuator is the least source-constrained part of the architecture, and therefore the place where one must think hardest. A useful actuator must satisfy four conditions simultaneously:
+
+\begin{enumerate}[leftmargin=2em]
+\item it must respond reproducibly to an ionic or electrochemical control signal;
+\item it must couple measurably to the spin \ham{};
+\item it must be local enough to avoid system-wide drift;
+\item it must be structurally compatible with the peptide qubit scaffold.
+\end{enumerate}
+
+\subsection{Charged peptide hairpins}
+A short charged hairpin or helix that changes orientation under electric field or pH is an attractive first actuator because it can be genetically encoded, attached to a peptide scaffold, and simulated with standard biomolecular tools. Its main weakness is softness: if it fluctuates too much, it becomes a noise source rather than a control channel.
+
+\subsection{Secondary-shell protonation actuators}
+Another option is to place histidine, glutamate, or aspartate residues in a second shell near, but not within, the metal-binding pocket. Changing pH or local proton activity could then shift a nearby electrostatic environment. This is chemically elegant but dangerous. Protonation control is easy to implement and hard to localize. It is therefore best used as a calibration study rather than as the final gate mechanism.
+
+\subsection{Electroactive polymer or redox cofactor actuators}
+An electroactive polymer tether, or a redox-active cofactor near the peptide backbone, might provide larger and more discrete changes in local electric field or transport coupling. This has the advantage that the qubit can remain in a chemically stable buffer while the control is supplied electronically. Its disadvantage is synthetic complexity and possible parasitic spin centers.
+
+\subsection{Nanopore-field actuators}
+The most literal realization of the compartmental control picture is to use ionic current through a nanopore to generate a local field or electro-osmotic force that moves an attached element. This option is especially attractive in a surface-supported hybrid device, because the same nanopore can provide both the communication channel between control volumes and the electrostatic boundary condition. The engineering risk is that nanoscale ionic current is noisy, especially at low frequency, so the geometry and dielectric stack must be designed to filter fluctuations rather than broadcasting them to the qubit.
+
+\section{Distance, orientation, and coupling leverage}
+The estimated 20~\AA{} qubit-qubit spacing for \dalbt{}-like constructs immediately suggests a design problem: how much geometric change is needed to matter? For a dipolar-dominated interaction, the scaling is roughly
+\[
+J_{\mathrm{dip}} \propto \frac{1}{r^3}.
+\]
+That means even a modest relative change in distance can produce a nontrivial coupling change. A 10\% reduction in distance corresponds to about a 37\% increase in the idealized dipolar term. Likewise, a change in orientation of the anisotropy axes can shift angular prefactors and alter the sign or magnitude of effective projected couplings.
+
+This is good news for actuator design. The architecture does not require nanometer-scale molecular contortions to get any signal at all. On the other hand, the same sensitivity means thermal fluctuations can be harmful. The actuator must shift an equilibrium geometry in a reproducible way, not merely introduce a broader distribution of geometries.
+
+\section{Readout options and their tradeoffs}
+The architecture deliberately keeps readout plural because no single modality is guaranteed to win at this stage.
+
+\subsection{Pulsed EPR}
+Pulsed EPR is the most direct continuation of the current peptide-spin platform and should remain the primary calibration tool. Its strength is interpretability. Its weakness is that it is not automatically device scalable and becomes harder once samples are immobilized on surfaces or integrated into narrow geometries.
+
+\subsection{Transport readout}
+Transport readout is attractive because it is naturally compatible with chip-scale integration and with the \lbtc{}/gold direction. Its weakness is ambiguity: transport signals often mix many effects, including contact geometry, charging, local disorder, and spin selection rules. A transport anomaly without spectroscopic cross-check is rarely convincing.
+
+\subsection{Resonator readout}
+Superconducting or high-$Q$ resonator coupling is a strong medium-term option. It leverages the maturing hybrid-circuit molecular-spin literature and offers a path toward ensemble-enhanced detection. Its weakness is experimental overhead and the need to manage the microwave environment carefully in the presence of electrochemical control structures.
+
+\subsection{Optical helper readout}
+A longer-term hybrid route is to place an optically active biomolecular reporter adjacent to the peptide-lanthanide module. The 2025 fluorescent-protein qubit result makes this less speculative than it would have been earlier. The challenge is that hybrid optical-microwave-electrochemical integration is demanding. It should therefore be treated as a second-generation architecture, not a prerequisite for the first one.
+
+\section{Microfluidic control volumes}
+The ``cell'' metaphor becomes experimentally manageable if one treats each cell as a microfluidic reservoir with well-defined composition, pressure, and electrical bias. A sensible implementation uses:
+
+\begin{enumerate}[leftmargin=2em]
+\item two low-volume reservoirs with independently programmable ionic composition;
+\item a membrane or dielectric barrier containing a nanoscale junction;
+\item a local sensor line to record current, capacitance, or potential across the junction;
+\item a rigid region on which the qubit scaffold is mounted and optically or electrically accessible.
+\end{enumerate}
+
+This makes the system closer to a lab-on-chip quantum device than to a literal biological cell. That is a virtue. It preserves the compartmental-control intuition without inheriting all the uncontrolled complexity of living matter.
+
+\section{Chemical windows and safe operating settings}
+Because the device is partly biochemical and partly quantum hardware, it needs explicit safe operating windows. The peptide-spin experiments used HEPES-buffered, near-neutral aqueous conditions with NaCl and reducing agents for solution work, and similarly controlled conditions for surface assembly. A first-generation ion-gated architecture should remain close to those windows. This means:
+
+\begin{enumerate}[leftmargin=2em]
+\item near-neutral pH unless a carefully bounded secondary-shell protonation experiment is being run;
+\item ionic strength variations small enough not to alter gross folding or coordination;
+\item bias voltages low enough to avoid electrolysis, denaturation, or irreversible charge injection;
+\item temperature protocols that preserve both cryogenic qubit performance and mechanical stability of the actuation layer.
+\end{enumerate}
+
+The point is subtle but important. The control challenge is not merely to maximize actuator response. It is to maximize the \emph{useful} response within a chemically reversible setting.
+
+\section{Why a rigid reference device is necessary}
+Before building a fully ion-gated device, one should build a rigid reference device that is identical except for the dynamic actuator. This reference should have:
+
+\begin{enumerate}[leftmargin=2em]
+\item the same qubit chemistry,
+\item the same surface anchoring,
+\item the same readout pathway,
+\item but a mechanically locked linker or a chemically inert actuator mutant.
+\end{enumerate}
+
+This reference will answer a vital question: is the observed change truly due to intentional control, or merely to the fact that the full device is structurally less well behaved? Without such a reference, the project risks spending years studying artifacts of softness rather than genuine control.
+
+\chapter{Worked Example: Calibrating a Two-Qubit Ion-Gated Gate}
+
+\section{Purpose of the worked example}
+The architecture described so far may still feel abstract. This chapter therefore presents a worked design example. The numbers are illustrative rather than final experimental predictions, but the workflow is concrete. The goal is to show what a serious first gate-calibration campaign would look like.
+
+\section{Step 1: build a baseline two-site module}
+Start from a two-site construct derived from \dalbt{} logic, but no longer stop at the peptide template. Use RFdiffusion3 to scaffold the two sites inside a rigid local fold while holding the metal-binding cores and actuator residues fixed, and then apply a ThermoGFN-IF-style redesign loop to rigidify the second shell and preserve the intended ion-bound geometry. Site 1 is engineered for robust Gd-based EPR visibility. Site 2 is made spectroscopically distinguishable either by a different lanthanide or by a conservative local perturbation that shifts the effective resonance. The two sites are placed at approximately 20~\AA{} separation on a rigid peptide or protein scaffold. A nearby actuator arm is attached so that its field- or pH-dependent motion changes either the distance by a few angstroms at most or, more realistically, the angular projection and local field environment.
+
+\section{Step 2: measure the idle Hamiltonian}
+With the actuator held in a nominal ``off'' state, measure:
+
+\begin{enumerate}[leftmargin=2em]
+\item the resonance frequency of each qubit,
+\item the coherence envelope of each qubit,
+\item any static dipolar splitting or conditional phase accumulation,
+\item and the actuator's own baseline stability.
+\end{enumerate}
+
+At this stage, the device is simply a fixed molecular dimer. The objective is to extract the idle \ham{}
+\[
+H_{\mathrm{idle}} = \frac{\omega_1^{(0)}}{2}\sigma_z^{(1)} + \frac{\omega_2^{(0)}}{2}\sigma_z^{(2)} + J_{ZZ}^{(0)}\sigma_z^{(1)}\sigma_z^{(2)} + H_{\mathrm{spec}},
+\]
+where $H_{\mathrm{spec}}$ contains small spectator or calibration terms.
+
+\section{Step 3: characterize the actuator transfer function}
+Now drive the junction through a family of static frames $F_k$ with different ionic imbalance or gate voltage, but no fast time dependence yet. For each frame, re-measure:
+
+\begin{enumerate}[leftmargin=2em]
+\item $\omega_1(F_k)$,
+\item $\omega_2(F_k)$,
+\item $J_{ZZ}(F_k)$ or the nearest measurable proxy,
+\item $T_2(F_k)$,
+\item and actuator reversibility after returning to the baseline frame.
+\end{enumerate}
+
+This generates an empirical transfer function. The desired result is not necessarily a huge shift in the single-qubit frequencies. In fact, very large frequency drift may be undesirable if it comes with large dephasing. The best case is a moderate, predictable shift in pair interaction with only a modest coherence penalty.
+
+\section{Step 4: fit an effective control model}
+Fit the measured data to a reduced model such as
+\begin{align}
+\omega_1(F_k) &= \omega_1^{(0)} + a_1 x_k + b_1 y_k, \\
+\omega_2(F_k) &= \omega_2^{(0)} + a_2 x_k + b_2 y_k, \\
+J_{ZZ}(F_k) &= J_{ZZ}^{(0)} + c_1 x_k + c_2 y_k + c_3 x_k y_k,
+\end{align}
+where $x_k$ and $y_k$ are low-dimensional representations of the electrochemical state, such as effective membrane potential and ionic asymmetry. This model is not fundamental physics. It is a control model. Its role is to let the experimenter predict which frames are most useful for a future gate attempt.
+
+\section{Step 5: estimate whether a gate is even plausible}
+Suppose the fit yields an actuator-induced differential coupling
+\[
+\Delta J_{ZZ} = J_{ZZ}^{\mathrm{on}} - J_{ZZ}^{\mathrm{off}}.
+\]
+Then the first viability test is
+\[
+\tau_{\mathrm{CZ}} \sim \frac{\pi}{4\Delta J_{ZZ}} < T_2^{\mathrm{controlled}},
+\]
+preferably by a generous margin. If this inequality is badly violated, then no amount of pulse-shaping elegance will rescue the device as a gate platform. It might still be an interesting tunable spectroscopic system, but not an interaction-modulated qubit device.
+
+\section{Step 6: choose a pulse sequence}
+Assuming the gate is plausible, choose a minimal pulse program:
+
+\begin{enumerate}[leftmargin=2em]
+\item prepare a product superposition state;
+\item enter the actuator ``on'' frame;
+\item wait for $\tau/2$;
+\item apply a refocusing or spin-echo pulse if needed to cancel unwanted single-qubit drift;
+\item remain in the same or a mirrored frame for another $\tau/2$;
+\item return to the idle frame and perform readout.
+\end{enumerate}
+
+The exact choice depends on whether the effective interaction is more Ising-like or more exchange-like. The important point is that the electrochemical frame must be incorporated into the pulse compilation, not treated as a separate slow laboratory setting.
+
+\section{Step 7: distinguish gate signal from actuator artifact}
+In a hybrid molecular device, an apparent ``gate signal'' could arise from many non-quantum artifacts:
+
+\begin{enumerate}[leftmargin=2em]
+\item microwave detuning caused by actuator drift,
+\item loss of spin echo due to extra noise rather than coherent conditional evolution,
+\item contact-resistance changes misread as spin-dependent transport,
+\item irreversible conformational drift during repeated cycling.
+\end{enumerate}
+
+Therefore the gate-validation protocol must include:
+
+\begin{enumerate}[leftmargin=2em]
+\item a no-actuator control construct,
+\item a random-frame control schedule,
+\item repeated cycling to prove reversibility,
+\item and, if possible, two independent readout channels such as EPR plus transport.
+\end{enumerate}
+
+\section{Step 8: update the design loop}
+If the gate attempt fails, the right response is not merely to tune the pulse sequence. One should ask which part of the device is responsible:
+
+\begin{enumerate}[leftmargin=2em]
+\item insufficient actuator gain,
+\item excessive actuator noise,
+\item poor qubit distinguishability,
+\item overly strong substrate interaction,
+\item or inadequate linker rigidity.
+\end{enumerate}
+
+That diagnosis should feed directly back into sequence design, RFdiffusion3 scaffold redesign, ThermoGFN-IF \emph{training-objective} reweighting in the next fine-tuning round, or control-window restriction. The molecular and control layers must evolve together.
+
+\section{What success would look like in this worked example}
+Success does not need to mean textbook fault-tolerant fidelity. For a first demonstration, the following would already be strong:
+
+\begin{enumerate}[leftmargin=2em]
+\item a fitted, reversible control dependence of $J_{ZZ}$ or $J_{XY}$ on electrochemical frame,
+\item a coherence-retaining ``on'' frame,
+\item a time-domain signal consistent with conditional evolution rather than simple dephasing,
+\item and consistency across multiple device cycles or samples.
+\end{enumerate}
+
+That would convert ion-density trajectories from an intuitive design picture into a calibrated quantum-control object.
+
+\chapter{Relation to 2024--2026 Developments}
+
+\section{Why recent developments matter}
+A 2026 perspective is important not for rhetorical freshness but for technical positioning. The key question is whether peptide-bound lanthanide spins still occupy a meaningful frontier. They do, although now within a far more diverse ecosystem than existed in 2017.
+
+\section{All-atom biomolecular design changed the geometry problem}
+One of the biggest relevant changes is that all-atom biomolecular design is no longer restricted to post hoc sidechain fitting around a fixed protein backbone. RFdiffusion3 shows that proteins can be generated directly in the presence of non-protein atoms and fixed functional motifs, with atom-level conditioning for hydrogen bonds, ligand contacts, and motif geometry \cite{rfdiffusion32025}. For the present manuscript, this matters because the bottleneck is fundamentally geometric: the architecture needs protein material wrapped around a protected ion-binding core, actuator motifs, and membrane- or pore-adjacent anchors without losing the exact coordination geometry of the qudit core. That was previously awkward. It is now a concrete, design task of relative simplicity. With an moderate amount of skill with RFdiffusion3, such design tasks could be completed in less than a few weeks. 
+
+\section{Thermostability Optimization and Robustness}
+The complementary development is methodological rather than structural. ThermoGFN-IF frames thermostability, binding awareness, and dynamics-aware redesign as a \emph{training-time} multi-oracle fine-tuning problem over all-atom sequence space \cite{thermogfnif2026}. That is precisely the right attitude for biomolecular quantum hardware, where no single proxy captures the design objective. The relevant question is not only whether a sequence folds, but whether the \emph{trained} redesign model preferentially emits sequences that rigidify the second shell, preserve the ion pocket, retain membrane- or partner-binding context, and reduce the low-frequency motions most harmful to coherence. A multi-oracle fine-tuning stack for a base model such as LigandMPNN or ADFLIP, makes that objective much more explicit and much less ad hoc, while still leaving deployment as ordinary inference from the trained model ThermoGFN-IF. 
+
+\section{Molecular spins as quantum sensors in hybrid circuits}
+Recent work has pushed molecular spins into hybrid microwave sensing settings. A notable 2024 example is the use of molecular spin ensembles on superconducting coplanar resonators for AC magnetic-field sensing, demonstrating echo-based dynamical-decoupling protocols and sensitivity estimates that make molecular spins relevant as engineered sensors rather than only as isolated spectroscopic objects. This matters for the present proposal because it shows that molecular-spin hardware can live near resonators, microwave structures, and chip-scale measurement circuits without immediately losing all practical value. The ion-gated peptide architecture could therefore borrow readout and calibration strategies from hybrid resonator experiments instead of inventing all infrastructure from scratch.
+
+\section{Protein qubits became more credible in 2025}
+One of the biggest context shifts between 2017 and 2026 is that protein-based qubits are no longer purely aspirational. In 2025, Feder, Soloway, Verma, Geng, Wang, Kifle, Riendeau, Tsaturyan, Weiss, Xie, Huang, Esser-Kahn, Gagliardi, Awschalom, and Maurer reported a fluorescent-protein spin qubit in enhanced yellow fluorescent protein. The work demonstrated optical addressability, coherent microwave control, and microsecond-scale coherence under decoupling, while also retaining useful behavior in cellular environments and room-temperature ODMR contrast in bacteria. The present manuscript does not depend on that exact platform, but the result changes the tone of biomolecular quantum engineering. It means that genetically encoded qubits are no longer merely conceptual cousins of solid-state defects; they are experimentally active objects.
+
+This has two implications for the present architecture. First, a peptide-lanthanide platform can be discussed alongside other biomolecular qubit modalities rather than in isolation. Second, hybrid devices become more plausible: one can imagine a peptide lanthanide module acting as a chemically programmable interaction element while a fluorescent or radical protein provides optical reporting or sensing nearby.
+
+\section{Optically activated molecular coupling in 2026}
+Another recent development highly relevant to the broader question of dynamic coupling is the 2026 report by Privitera, Chiesa, Santanni, Ranieri, Sahu, Krzyaniak, Caneschi, Young, Senge, Totti, Wasielewski, Carretta, and Sessoli on light-activated qubit coupling in a vanadyl porphyrin trimer. The significance of that work is conceptual rather than chemical. It shows that a molecular architecture can keep qubits weakly coupled in one state and activate stronger coupling upon an external trigger, here photoexcitation. That validates the broader idea that molecules can host \emph{gated interactions}, not just static ones.
+
+The architecture proposed in this paper is an electrochemical analogue of that idea. Instead of an optical trigger creating a spin-active excited-state bridge, an ionic or electrostatic trigger would move a molecular actuator into a different coupling setting. The two directions are complementary, not competitive. Indeed, a long-term platform might combine them.
+
+\section{On-surface molecular-spin control remains difficult but relevant}
+The 2024 perspective on nanomagnet properties on surfaces and the 2025 review on electrically coherent manipulation of individual atomic and molecular spins on surfaces both reinforce a sober point: once a molecular spin is placed on a surface, the surface is not passive. It can quench, broaden, polarize, or otherwise reshape the spin physics. This lesson is directly relevant to the \lbtc{}/gold strategy. The 2017 results are promising precisely because they do not pretend the surface is innocent; they already model low hybridization and transport-window placement.
+
+For the ion-gated architecture, this means one should prefer designs with either
+
+\begin{enumerate}[leftmargin=2em]
+\item sufficient buffer layers to suppress destructive substrate coupling, or
+\item deliberate exploitation of a weak but controlled substrate interaction for readout.
+\end{enumerate}
+
+What one must avoid is the worst middle ground: a surface strong enough to spoil coherence but too uncontrolled to read out usefully.
+
+\section{Scaling through ordered materials}
+The 2025 report of a triple-site Gd$_3$ carborane metal-organic framework aimed at scalable quantum computing is relevant not because the chemistry is identical to peptides, but because it demonstrates the continued importance of structurally ordered, addressable multi-center lanthanide architectures. The lesson is that scaling remains a geometry problem as much as a coherence problem. MOFs solve some aspects of periodic order very well. Peptides solve sequence programmability and bioconjugation very well. A 2026 research landscape should therefore treat them as complementary families of scaffolds.
+
+\section{The strategic takeaway}
+Viewed against 2024--2026 progress, the 2017 peptide-spin study was not an isolated curiosity. It was an early demonstration of a design space that has become more, not less, interesting: biomolecularly encoded quantum hardware with tunable interfaces to surfaces, transport, and external control fields.
+
+\chapter{Critical Risks, Failure Modes, and Design Rules}
+
+\section{The core risks}
+The proposed architecture is technically interesting because it tries to exploit a control channel that is both useful and dangerous. The main risks are listed below.
+
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Coordination-sphere disruption.} Ionic or pH control perturbs residues directly involved in lanthanide binding.
+\item \textbf{Charge-noise decoherence.} The actuator layer introduces low-frequency electrostatic noise that kills $T_2$.
+\item \textbf{Mechanical overcompliance.} The actuator moves, but the qubit geometry becomes too floppy to calibrate reproducibly.
+\item \textbf{Surface quenching.} The readout substrate or electrode hybridizes too strongly with the molecular state.
+\item \textbf{Electrochemical irreversibility.} Repeated ionic cycling denatures, oxidizes, or otherwise damages the biomolecular construct.
+\item \textbf{Control cross-talk.} The same ionic change unintentionally shifts many qubits or readout channels at once.
+\item \textbf{Thermal mismatch.} The electrochemical control stack works best near room temperature while the qubit core still requires cryogenic operation.
+\end{enumerate}
+
+Each risk suggests a corresponding rule and mitigation strategy, as shown in Figure \ref{mitigation}. 
+% \section{How to mitigate those risks}
+% Each risk suggests a corresponding rule.
+
+\begin{table}[ht]\label{mitigation}
+\centering
+\caption{Risk-to-rule mapping for the ion-gated architecture.}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.0cm} X}
+\toprule
+Risk & Design rule \\
+\midrule
+Coordination-sphere disruption & Keep ion-sensitive motifs in a secondary shell or separate actuator module. Never put the strongest ionic control handle in the primary lanthanide binding pocket. \\
+Charge-noise decoherence & Use differential screening layers, minimize stochastic ion motion near the qubit, and favor actuator states with discrete metastable configurations over continuously fluctuating ones. \\
+Mechanical overcompliance & Design short, partially rigid linkers and characterize them by simulation and structural probes before full qubit integration. \\
+Surface quenching & Insert buffer layers or sparse attachment motifs and calibrate molecule-surface coupling with transport and spectroscopy before qubit experiments. \\
+Electrochemical irreversibility & Restrict the control waveform to chemically safe windows of pH, ionic strength, and bias; monitor reversibility over many cycles. \\
+Control cross-talk & Use intentionally asymmetric sites, localized actuators, and a compiler-aware calibration model rather than assuming ideal isolation. \\
+Thermal mismatch & Build first-generation devices for cryogenic operation; treat room-temperature biological compatibility as an extension (utilizing proteins with higher computation operating temperatures such as PDB: 2V1A (AsLOV2 structure)), not an initial requirement. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{What would falsify the architecture quickly}
+It is useful to state what negative outcomes would genuinely weaken the program:
+
+\begin{enumerate}[leftmargin=2em]
+\item If any actuator strong enough to shift coupling also destroys coherence beyond usefulness, the architecture loses its central advantage.
+\item If the ionic control signal cannot be localized and only produces global drift, the quantum-circuit interpretation becomes too weak to matter.
+\item If surface or scaffold integration consistently destroys the peptide qubit's spectroscopic identity, the chip-level route becomes doubtful.
+\item If the mechanically actuated change in distance or orientation is too small to produce a gate-relevant $\Delta J$, then ionic control is spectroscopically interesting but computationally weak.
+\end{enumerate}
+
+\section{What would count as success}
+Conversely, a minimal success case is much smaller than a full quantum computer:
+
+\begin{enumerate}[leftmargin=2em]
+\item a reproducible multi-site peptide-lanthanide module,
+\item a secondary-shell ionic actuator that reversibly changes a measured spin parameter,
+\item retained coherence in the controlled state,
+\item and a gate-relevant change in conditional evolution.
+\end{enumerate}
+
+That alone would justify the architecture as a serious line of research.
+
+\chapter{Conclusion}
+The central claim of the manuscript is not merely that peptide-bound lanthanides are interesting molecular qubits. It is that the combination of three ingredients makes the architecture much sharper than it was in 2017: experimentally grounded protein-ion qudit cores, RFdiffusion3-driven all-atom motif scaffolding for local logical modules, and ThermoGFN-IF-style ligand-aware thermostability and binding affinity optimization for sequence refinement and operating-window expansion. Together, these ingredients shift the platform from an intriguing molecular-control concept toward a layered engineering program with explicit geometry, explicit robustness objectives, and explicit compilation abstractions.
+
+That shift matters because it changes where computational robustness comes from. Long-range ion transport should not be asked to create all logical structure dynamically. Instead, RFdiffusion3-scaffolded subnetworks should provide strong local couplings and redundancy, ThermoGFN-IF-style redesign should rigidify those subnetworks and protect their ion-binding contexts, and electrochemical control should be used to bias, synchronize, and interconnect them. A particularly novel lever in this revised picture is de novo gap-junction modulation: binders with tuned on-rates and off-rates can bias junction opening either by direct connexin binding or by engaging upstream gating partners. In that hierarchy, single protein-ion complexes act as qudits, local scaffolded blocks act as logical qubits, and intercellular coupling graphs become the substrate for minimal-genus embeddings and surface-code-like or hyperbolic error-correction layers.
+
+The paper is intentionally rigorous about what has and has not been shown. It does not claim that fault-tolerant quantum computation in living human cells exists today, nor that thermostability optimization alone closes the full temperature gap between cryogenic spin coherence and physiological operation. What it does claim is narrower and stronger: de novo all-atom scaffold generation, training-time multi-oracle stability fine-tuning, gap-junction-aware control design, and topology-aware compilation now provide a credible framework for turning a chemically elegant peptide-qubit result into a serious research program in hierarchical biomolecular quantum engineering.
+
+The near-term milestone remains a clean, reversible, gate-relevant demonstration on a strongly characterized local module. But the long-term picture is now clearer than before. If local modules can be scaffolded, rigidified, and entangled reproducibly, then electrochemical trajectories become more than a metaphor and human-cell deployment becomes more than a slogan. It becomes a staged scientific objective with explicit design rules, explicit failure modes, and a path toward topologically organized, chemically programmable quantum hardware.
+
+\appendix
+
+\chapter{Source-Derived Parameters and Sequences}
+
+\section{Canonical motifs}
+\begin{longtable}{>{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{8.5cm}}
+\toprule
+Construct & Sequence / description \\
+\midrule
+\endfirsthead
+\toprule
+Construct & Sequence / description \\
+\midrule
+\endhead
+LBT & \texttt{YIDTNNDGWYEGDELLA} \\
+LBTC & \texttt{YIDTNNDGWYEGDELC}; cysteine-bearing surface-anchorable variant used for SAM formation. \\
+daLBT & \texttt{YIDTDNDGWYEGDELYIDTNNDGWYEGDELLA}; asymmetric double-\lbt{} construct with two distinct coordination environments. \\
+Nonanuclear template & Sequence logic based on two \lbt{} units denoted 0 and 1, arranged in an arbitrary binary-like string with unique short linkers derived from permutations of \texttt{GASAG}. \\
+\bottomrule
+\end{longtable}
+
+\section{Selected source-paper experimental details}
+\begin{longtable}{>{\raggedright\arraybackslash}p{4.1cm} >{\raggedright\arraybackslash}p{7.3cm}}
+\toprule
+Parameter & Source-derived value or condition \\
+\midrule
+\endfirsthead
+\toprule
+Parameter & Source-derived value or condition \\
+\midrule
+\endhead
+Pulsed EPR environment & HEPES buffer, NaCl, reducing agent, cryoprotection with glycerol, degassed frozen solution. \\
+Microwave frequency & X-band setting around 9.3--9.7 GHz in the reported measurements. \\
+Pulse lengths & $\pi/2 \approx 12$ ns and $\pi \approx 24$ ns in the supporting information. \\
+Magnetic field for Rabi calibration & Around 3480 G in the reported pulsed-EPR setup. \\
+GdLBT coherence & $T_1 \sim 10~\mu$s, $T_2 \sim 2~\mu$s. \\
+NdLBT coherence & $T_1 \sim 3~\mu$s, $T_2 \sim 1~\mu$s. \\
+Estimated dimer distance & Approximately $20 \pm 1$~\AA{} for non-spaced double-\lbt{} motifs. \\
+SAM growth conditions & Overnight immersion on gold in buffered TbLBTC solution with HEPES, NaCl, TbCl$_3$, and TCEP. \\
+Transport model & NEGF-DFT with \au{} electrodes, low hybridization, transmission peak near $E-E_F \approx -0.3$ eV. \\
+\bottomrule
+\end{longtable}
+
+\chapter{Quantitative Hierarchy and Resource Estimates}
+
+\section{Representative geometry and shell-to-bulk conversion}
+The main text uses a membrane-proximal shell model because the proposed control architecture is explicitly membrane-adjacent. For a roughly spherical engineered cell of radius $r$,
+\begin{equation}
+A_m = 4\pi r^2,
+\qquad
+V_{\mathrm{cell}} = \frac{4\pi r^3}{3}.
+\end{equation}
+If only a shell of thickness $h_{\mathrm{shell}}$ participates directly in the computational substrate, then the accessible shell volume is
+\begin{equation}
+V_{\mathrm{shell}} = A_m h_{\mathrm{shell}}.
+\end{equation}
+The corresponding shell-to-bulk ratio is therefore
+\begin{equation}
+\frac{V_{\mathrm{cell}}}{V_{\mathrm{shell}}}
+=
+\frac{r}{3h_{\mathrm{shell}}}.
+\end{equation}
+For $r=10~\mu\mathrm{m}$ and $h_{\mathrm{shell}}=50~\mathrm{nm}$, this ratio is approximately $67$. Thus the whole-cell abundance
+\begin{equation}
+N_{0,\mathrm{bulk}}
+\approx
+\eta_{\mathrm{act}} N_A c_q V_{\mathrm{cell}}
+\end{equation}
+is a true biochemical upper ceiling, but it is not the relevant near-term architecture number. The membrane-shell count in Eq.~\eqref{eq:N0-shell} is the more honest estimate because only membrane-proximal complexes naturally participate in the proposed ion-channel and gap-junction control geometry.
+
+\section{Calibration, logical overhead, and compile-time complexity}
+Equations~\eqref{eq:Nrobust} and \eqref{eq:Pcal} turn the hierarchy into a budgeting exercise. The physical qudit budget $N_0$ determines the module budget $M_1$, which determines both the topological logical count and the calibration burden. The calibration budget is not only a storage problem; it is also an experimental workload problem because each fitted coefficient must be learned under drift, disorder, and biochemical yield variation.
+
+At the same time, the sparse hierarchy protects the classical control stack from becoming intractable. Let
+\[
+V_H = \sum_p M_p,
+\qquad
+E_H = \sum_p E^{(p)}_{\mathrm{intra}} + E_{\mathrm{inter}}.
+\]
+Then a single upper-layer routing or syndrome-schedule update can be implemented with standard weighted-graph routines whose complexity is near-linear in $E_H$ and $V_H$. The global compile-time problem is therefore modest compared with the local module-identification problem. By design, the architecture trades a very hard all-to-all global control problem for many smaller local calibration problems plus one sparse graph-compilation problem.
+
+\begin{table}[ht]
+\centering
+\scriptsize
+\caption{Representative calibration and robust-logical budgets derived from the main-text scenario envelopes. The calibration count uses Eq.~\eqref{eq:Pcal} with $\alpha_{\mathrm{site}}=5$, $\alpha_{\mathrm{dense}}=4$, and $\alpha_{\mathrm{sparse}}=3$. Robust logical counts assume a $100$-cell sheet and $\kappa_{\mathrm{code}}=3$, giving very conservative estimates.}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.4cm} >{\centering\arraybackslash}p{2.1cm} >{\centering\arraybackslash}p{1.8cm} >{\centering\arraybackslash}p{1.8cm} X}
+\toprule
+setting & $P_{\mathrm{cal}}$ / cell & $N_{\mathrm{robust}}^{(100)}(D=3)$ & $N_{\mathrm{robust}}^{(100)}(D=5)$ & $N_{\mathrm{robust}}^{(100)}(D=7)$ \\
+\midrule
+Demonstrator & $2.9\times10^3$ & $1.0\times10^2$ & $3.8\times10^1$ & $1.9\times10^1$ \\
+Robust single-cell setting & $2.2\times10^4$ & $9.1\times10^2$ & $3.3\times10^2$ & $1.7\times10^2$ \\
+Upper-envelope engineered cell & $9.6\times10^4$ & $2.7\times10^3$ & $9.9\times10^2$ & $5.0\times10^2$ \\
+\bottomrule
+\end{tabularx}
+\label{tab:appendix-resource}
+\end{table}
+
+Table~\ref{tab:appendix-resource} makes the main systems-level point explicit. Useful fault tolerance does not require astronomical per-cell all-to-all connectivity. It requires enough Level-0 abundance to populate many small dense modules, enough sparse Level-1 and Level-2 edges to stitch those modules into a compiler-friendly graph, and enough calibration bandwidth to keep the fitted effective model current. The central engineering challenge is therefore not to maximize raw molecular count indiscriminately, but to maximize the fraction of that count that survives into well-characterized logical structure.
+
+\chapter{Suggested Fabrication and Validation Sequence}
+
+\section{Month-by-month first-year plan}
+\begin{enumerate}[leftmargin=2em]
+\item Months 1--2: reproduce LBT and LBTC coordination and baseline spectroscopy.
+\item Months 2--4: reproduce GdLBT and NdLBT pulsed-EPR signatures and Rabi control.
+\item Months 4--6: design and screen secondary-shell actuator variants in simulation.
+\item Months 6--8: synthesize or express two-site constructs with and without actuators.
+\item Months 8--10: characterize actuator-induced spectroscopic shifts in static ionic states.
+\item Months 10--12: integrate a simple nanojunction or electrostatic gate and perform reversible control experiments.
+\end{enumerate}
+
+\section{A recommended validation hierarchy}
+The validation hierarchy should be respected in order:
+
+\begin{enumerate}[leftmargin=2em]
+\item chemical integrity;
+\item folding and structural reproducibility;
+\item baseline coherence;
+\item actuator calibration without transport;
+\item actuator calibration with transport or resonator interface;
+\item two-qubit conditional dynamics;
+\item only then larger arrays.
+\end{enumerate}
+
+\chapter{A Practical Optimal-Control Formulation}
+
+\section{Control objective}
+One useful formal problem is:
+\[
+\min_{\{\mathbf{u}_k,\Delta t_k\}}
+\left[
+1 - F_{\mathrm{gate}} +
+\lambda_1 \int_0^T \Gamma_\phi(t)\,dt +
+\lambda_2 \sum_k \|\mathbf{u}_{k+1}-\mathbf{u}_k\|^2
+\right],
+\]
+subject to chemical and device constraints
+\[
+\mathbf{u}_k \in \mathcal{C}_{\mathrm{safe}},
+\]
+where $\mathcal{C}_{\mathrm{safe}}$ encodes allowable ionic strengths, pH windows, bias limits, and actuator strain bounds.
+
+\section{Interpretation}
+This says the compiled control sequence should maximize gate fidelity while penalizing decoherence and unrealistic waveform roughness, all under chemistry-aware safety constraints. In other words, the compiler must know some chemistry.
+
+\chapter{Open Questions Worth Immediate Study}
+
+\section{Most urgent open questions}
+\begin{enumerate}[leftmargin=2em]
+\item Which secondary-shell perturbations measurably shift lanthanide spin parameters without collapsing coherence?
+\item What actuator modality provides the best ratio of control gain to added noise: electrostatic, protonation-based, mechanical, or transport-mediated?
+\item Can a peptide-bound qubit remain spectroscopically stable in a nanopore- or membrane-adjacent geometry?
+\item What is the smallest mechanically or electrostatically induced geometry change required to obtain a useful $\Delta J$ at a 20~\AA{} baseline separation?
+\item Can transport and pulsed-EPR measurements be meaningfully correlated in the same molecular family?
+\end{enumerate}
+
+\section{Final perspective}
+The value of the present synthesis is that it keeps qubit chemistry and control architecture in the same frame. Neither is enough alone. Together they define a tractable and testable research program.
+
+\begin{thebibliography}{99}
+
+\bibitem{rosaleny2017}
+L. E. Rosaleny, A. Forment-Aliaga, H. Prima-Garcia, R. Torres Cavanillas, J. J. Baldovi, V. Golabiewska, K. Wlazlo, G. Escorcia-Ariza, L. Escalera-Moreno, S. Tatay, C. Garcia-Llacer, M. Clemente-Leon, S. Cardona-Serra, P. Casino, L. Martinez-Gil, A. Gaita-Arino, and E. Coronado,
+\emph{Peptides as versatile scaffolds for quantum computing},
+arXiv:1708.09440v2, 2017.
+
+\bibitem{franz2003}
+K. J. Franz, M. Nitz, and B. Imperiali,
+\emph{Lanthanide-Binding Tags as Versatile Protein Coexpression Probes},
+Chembiochem, 4, 265--271, 2003.
+
+\bibitem{escalera2017}
+L. Escalera-Moreno, N. Suaud, A. Gaita-Arino, and E. Coronado,
+\emph{Determining Key Local Vibrations in the Relaxation of Molecular Spin Qubits and Single-Molecule Magnets},
+J. Phys. Chem. Lett., 8, 1695--1700, 2017.
+
+\bibitem{bonizzoni2024}
+C. Bonizzoni, A. Ghirri, F. Santanni, and M. Affronte,
+\emph{Quantum sensing of magnetic fields with molecular spins},
+npj Quantum Information, 10, Article 41, 2024.
+
+\bibitem{feder2025}
+J. S. Feder, B. S. Soloway, S. Verma, Z. Z. Geng, S. Wang, B. B. Kifle, E. G. Riendeau, Y. Tsaturyan, L. R. Weiss, M. Xie, J. Huang, A. Esser-Kahn, L. Gagliardi, D. D. Awschalom, and P. C. Maurer,
+\emph{A fluorescent-protein spin qubit},
+Nature, 645(8079), 73--79, 2025.
+
+\bibitem{privitera2026}
+A. Privitera, A. Chiesa, F. Santanni, D. Ranieri, P. P. Sahu, M. D. Krzyaniak, A. Caneschi, R. M. Young, M. O. Senge, F. Totti, M. R. Wasielewski, S. Carretta, and R. Sessoli,
+\emph{Light-Activated Qubit Coupling in a Vanadyl Porphyrin Trimer},
+J. Am. Chem. Soc., 148(10), 10408--10420, 2026.
+
+\bibitem{xuan2025}
+D. Xuan, Y. Wang, and X. Zhang,
+\emph{Electrically coherent manipulation of individual atomic and molecular spins on surface},
+Phys. Chem. Chem. Phys., 27, 5443--5458, 2025.
+
+\bibitem{surfaces2024}
+L. Rosado Piquer and E. C. Sanudo,
+\emph{Challenges for exploiting nanomagnet properties on surfaces},
+Communications Chemistry, 2024.
+
+\bibitem{gd3mof2025}
+E. Bartolome, X.-B. Li, A. Arauzo, J. Luzon, I. Garcia-Rubio, and J. Giner Planas,
+\emph{A Triple-Site Gd$_3$ Carborane Metal-Organic Framework toward Scalable Quantum Computing},
+ACS Applied Materials and Interfaces, 2025.
+
+\bibitem{imperiali2007}
+N. R. Silvaggi, L. J. Martin, H. Schwalbe, B. Imperiali, and K. N. Allen,
+\emph{Double-Lanthanide-Binding Tags for Macromolecular Crystallographic Structure Determination},
+J. Am. Chem. Soc., 129, 7114--7120, 2007.
+
+\bibitem{transport2017}
+L. E. Rosaleny \etal{},
+\emph{Transport Calculations on LBTC between two gold electrodes},
+Supporting Information, 2017.
+
+\bibitem{ciss2017}
+R. Naaman and D. H. Waldeck,
+\emph{Spintronics and Chirality: Spin Selectivity in Electron Transport Through Chiral Molecules},
+Annual Review of Physical Chemistry, 66, 263--281, 2015.
+
+\bibitem{rfdiffusion32025}
+J. Butcher, R. Krishna, R. Mitra, R. I. Brent, Y. Li, N. Corley, P. Kim, J. Funk, S. Mathis, S. Salike, A. Muraishi, H. Eisenach, T. R. Thompson, J. Chen, Y. Politanska, E. Sehgal, B. Coventry, O. Zhang, B. Qiang, K. Didi, M. Kazman, F. DiMaio, and D. Baker,
+\emph{De novo Design of All-atom Biomolecular Interactions with RFdiffusion3},
+bioRxiv preprint, doi:10.1101/2025.09.18.676967, 2025.
+
+\bibitem{thermogfnif2026}
+A. Schreiber,
+\emph{ThermoGFN-IF: Multi-Fidelity GFlowNet Fine-Tuning of ADFLIP for Thermostable, Binding-Aware, and Catalysis-Aware Protein Design},
+manuscript, 2026.
+
+\bibitem{rf32025}
+N. Corley \etal{},
+\emph{Accelerating Biomolecular Modeling with AtomWorks and RF3},
+bioRxiv preprint, doi:10.1101/2025.08.14.670328, 2025.
+
+\bibitem{uma2025}
+B. M. Wood \etal{},
+\emph{UMA: A Family of Universal Models for Atoms},
+arXiv:2506.23971, 2025.
+
+\bibitem{infgcn2023}
+C. Cheng and J. Peng,
+\emph{Equivariant Neural Operator Learning with Graphon Convolution},
+arXiv:2311.10908, 2023.
+
+\bibitem{graphembedding1987}
+J. L. Gross and T. W. Tucker,
+\emph{Topological Graph Theory},
+Wiley, 1987.
+
+\bibitem{kitaev2003}
+A. Y. Kitaev,
+\emph{Fault-tolerant quantum computation by anyons},
+Annals of Physics, 303(1), 2--30, 2003.
+
+\bibitem{quditsurface2007}
+S. S. Bullock and G. K. Brennen,
+\emph{Qudit surface codes and gauge theory with finite cyclic groups},
+Journal of Physics A: Mathematical and Theoretical, 40(13), 3481--3505, 2007.
+
+\bibitem{desplantez2012}
+T. Desplantez, V. Verma, L. Leybaert, W. H. Evans, and R. Weingart,
+\emph{Gap26, a connexin mimetic peptide, inhibits currents carried by connexin43 hemichannels and gap junction channels},
+Pharmacological Research, 65(5), 546--552, 2012.
+
+\bibitem{thevenin2017}
+A. F. Thevenin, R. A. Margraf, C. G. Fisher, R. M. Kells-Andrews, and M. M. Falk,
+\emph{Phosphorylation regulates connexin43/ZO-1 binding and release, an important step in gap junction turnover},
+Molecular Biology of the Cell, 28(25), 3595--3608, 2017.
+
+\end{thebibliography}
+
+\end{document}
