@@ -119,3 +119,20 @@ These 10 candidates (shaded) exemplify the best tradeoffs: EYFP and ferredoxins 
 
 **Conclusion:** Our analysis highlights fluorescent proteins (EYFP, others) and iron–sulfur ferredoxins as the strongest candidates for protein-based qubits, due to their comparatively long spin coherence and optical controllability【55†L93-L100】【89†L261-L264】. Engineered photoproteins (LOV, cryptochrome) add the advantage of living-cell compatibility and optical initialization【56†L158-L166】【86†L102-L110】. The compiled ranks and attributes should guide experimental efforts in realizing protein quantum hardware.  All data above come from structural databases and primary literature【55†L93-L100】【56†L158-L166】【89†L255-L264】【110†L172-L179】【112†L170-L174】【118†L174-L182】. 
 
+| Link                                                                                                     | Label(s) used in body text          |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| [https://www.nature.com/articles/s41586-025-09417-w](https://www.nature.com/articles/s41586-025-09417-w) | 55                                  |
+| [https://pmc.ncbi.nlm.nih.gov/articles/PMC11514009/](https://pmc.ncbi.nlm.nih.gov/articles/PMC11514009/) | 67, 89                              |
+| [https://www.nature.com/articles/s41586-025-09971-3](https://www.nature.com/articles/s41586-025-09971-3) | 51, 56, 91                          |
+| [https://www.nature.com/articles/s41586-021-03618-9](https://www.nature.com/articles/s41586-021-03618-9) | 86                                  |
+| [https://pubs.acs.org/doi/10.1021/acs.jpcb.3c06658](https://pubs.acs.org/doi/10.1021/acs.jpcb.3c06658)   | 78, 119                             |
+| [https://www.rcsb.org/structure/3V3D](https://www.rcsb.org/structure/3V3D)                               | 95                                  |
+| [https://www.rcsb.org/structure/2V1A](https://www.rcsb.org/structure/2V1A)                               | not directly cited as its own label |
+| [https://www.rcsb.org/structure/1XLQ](https://www.rcsb.org/structure/1XLQ)                               | not directly cited as its own label |
+| [https://www.rcsb.org/structure/1A70](https://www.rcsb.org/structure/1A70)                               | 103                                 |
+| [https://www.rcsb.org/structure/2WSC](https://www.rcsb.org/structure/2WSC)                               | 99                                  |
+| [https://www.rcsb.org/structure/4AZU](https://www.rcsb.org/structure/4AZU)                               | 110                                 |
+| [https://www.rcsb.org/structure/1HRC](https://www.rcsb.org/structure/1HRC)                               | 112, 114                            |
+| [https://www.rcsb.org/structure/1BRF](https://www.rcsb.org/structure/1BRF)                               | 118                                 |
+
+
