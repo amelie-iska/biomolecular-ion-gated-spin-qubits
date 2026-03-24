@@ -12,16 +12,23 @@ A rigorous research program with explicit implementation and validation details 
 
 ```mermaid
 flowchart LR
-    subgraph Qubit1 [Protein A]
-        SpinA(["e<sup>-</sup> spin in Protein A"])
+    subgraph Qubit1["Protein A"]
+        SpinA["Electron spin in Protein A"]
     end
-    subgraph Qubit2 [Protein B]
-        SpinB(["e<sup>-</sup> spin in Protein B"])
+
+    subgraph Qubit2["Protein B"]
+        SpinB["Electron spin in Protein B"]
     end
+
+    DriveA["Microwave pulses"]
+    DriveB["Microwave pulses"]
+    Control["Optical excitation and microwave control"]
+
     SpinA <-->|Magnetic dipolar coupling| SpinB
-    SpinA -- Microwave pulses --> SpinA
-    SpinB -- Microwave pulses --> SpinB
-    note over SpinA,SpinB: Controlled by optical excitation & microwaves
+    DriveA --> SpinA
+    DriveB --> SpinB
+    Control -.-> SpinA
+    Control -.-> SpinB
 ```
 
 ## Criteria & Ranking Methodology
